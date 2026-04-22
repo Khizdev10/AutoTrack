@@ -1,0 +1,14 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@import "nativewind/theme";
+
+@theme {
+    --font-sans: 'sans-serif';
+    --font-sans-bold: 'sans-serif-bold';
+    --font-sans-extrabold: 'sans-serif-extrabold';
+    --font-sans-light: 'sans-serif-light';
+    --font-sans-medium: 'sans-serif-medium';
+    --font-sans-semibold: 'sans-serif-semibold';
+}
