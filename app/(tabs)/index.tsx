@@ -38,7 +38,6 @@ export default function App() {
       <Header />
 
       <ScrollView showsVerticalScrollIndicator={false} className="px-5">
-        {/* REGISTRATION BADGE */}
         <View className="items-center mt-8">
           <View className="bg-blue-100 px-4 py-1 rounded-full">
             <Text className="text-blue-600 font-bold text-[10px] tracking-widest">REGISTRATION</Text>
