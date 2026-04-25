@@ -16,26 +16,47 @@ const AddCar = () => {
     const [modelName, setModelName] = useState("");
     const [productionYear, setProductionYear] = useState("");
     const [currentMileage, setCurrentMileage] = useState("");
-    // Defaulting to the placeholder image
-    const [imageUri, setImageUri] = useState('https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000');
+    const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000');
 
 
     useEffect(() => {
-        async function fetchCarData() {
-            try {
-                const token = await getToken({ template: 'supabase' });
-                if (!token) return;
-                const supabase = createClerkSupabaseClient(token);
-                const { data, error } = await supabase.from('cars').select('*');
+        // async function fetchCarData() {
+        //     try {
+        //         const token = await getToken({ template: 'supabase' });
+        //         if (!token) return;
+        //         const supabase = createClerkSupabaseClient(token);
+        //         const { data, error } = await supabase.from('cars').select('*');
 
-                if (data) setCars(data);
-                if (error) console.error("Error fetching cars:", error);
-            } catch (err) {
-                console.error(err);
-            }
-        }
-        fetchCarData();
+        //         if (data) setCars(data);
+        //         if (error) console.error("Error fetching cars:", error);
+        //     } catch (err) {
+        //         console.error(err);
+        //     }
+        // }
+        // fetchCarData();
     }, [getToken]);
+
+    const saveCarData = async () => {
+        try {
+            const token = await getToken({ template: 'supabase' });
+            if (!token) return;
+            const supabase = createClerkSupabaseClient(token);
+            const { data, error } = await supabase.from('cars').insert([
+                {
+                    vehicleMake,
+                    modelName,
+                    productionYear,
+                    currentMileage,
+                    imageUrl,
+                },
+            ]);
+
+            if (data) console.log("Car added successfully:", data);
+            if (error) console.error("Error adding car:", error);
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
 
 
@@ -50,7 +71,7 @@ const AddCar = () => {
         });
 
         if (!result.canceled) {
-            setImageUri(result.assets[0].uri); // Update the state with the new image
+            setImageUrl(result.assets[0].uri); // Update the state with the new image
         }
     };
 
@@ -74,7 +95,7 @@ const AddCar = () => {
                 {/* HERO IMAGE CARD */}
                 <View className="mt-8 rounded-3xl overflow-hidden h-48 bg-black relative">
                     <Image
-                        source={{ uri: imageUri }}
+                        source={{ uri: imageUrl }}
                         className="w-full h-full opacity-70"
                         resizeMode="cover"
                     />
@@ -167,7 +188,7 @@ const AddCar = () => {
 
                 {/* BUTTONS */}
                 <TouchableOpacity className="bg-black py-5 rounded-2xl mt-8 flex-row justify-center items-center">
-                    <Text className="text-white font-bold text-lg mr-2">Save Vehicle Details</Text>
+                    <Text className="text-white font-bold text-lg mr-2" onPress={saveCarData}>Save Vehicle Details</Text>
                     <Ionicons name="chevron-forward" size={20} color="white" />
                 </TouchableOpacity>
 
