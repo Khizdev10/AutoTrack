@@ -1,7 +1,7 @@
 
 import { createClerkSupabaseClient } from '@/app/lib/supabase';
 import "@/global.css";
-import { useAuth } from '@clerk/expo';
+import { useAuth, useUser } from '@clerk/expo';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { styled } from 'nativewind';
@@ -9,9 +9,12 @@ import { useEffect, useState } from 'react';
 import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
+const SafeAreaView = styled(RNSafeAreaView);
+
 const AddCar = () => {
     const [cars, setCars] = useState<any[]>([]);
     const { getToken } = useAuth();
+    const { user } = useUser();
     const [vehicleMake, setVehicleMake] = useState("");
     const [modelName, setModelName] = useState("");
     const [productionYear, setProductionYear] = useState("");
@@ -38,11 +41,12 @@ const AddCar = () => {
 
     const saveCarData = async () => {
         try {
-            const token = await getToken({ template: 'supabase' });
+            const token = await getToken();
             if (!token) return;
             const supabase = createClerkSupabaseClient(token);
             const { data, error } = await supabase.from('cars').insert([
                 {
+                    user_id: user?.id,
                     vehicleMake,
                     modelName,
                     productionYear,
@@ -74,8 +78,6 @@ const AddCar = () => {
             setImageUrl(result.assets[0].uri); // Update the state with the new image
         }
     };
-
-    const SafeAreaView = styled(RNSafeAreaView);
 
     return (
 
@@ -187,8 +189,8 @@ const AddCar = () => {
                 </View>
 
                 {/* BUTTONS */}
-                <TouchableOpacity className="bg-black py-5 rounded-2xl mt-8 flex-row justify-center items-center">
-                    <Text className="text-white font-bold text-lg mr-2" onPress={saveCarData}>Save Vehicle Details</Text>
+                <TouchableOpacity onPress={saveCarData} className="bg-black py-5 rounded-2xl mt-8 flex-row justify-center items-center">
+                    <Text className="text-white font-bold text-lg mr-2">Save Vehicle Details</Text>
                     <Ionicons name="chevron-forward" size={20} color="white" />
                 </TouchableOpacity>
 
