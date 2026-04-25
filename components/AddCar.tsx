@@ -59,8 +59,6 @@ const AddCar = () => {
     };
 
 
-
-
     const pickImage = async () => {
         // No permissions request is necessary for launching the image library
         let result = await ImagePicker.launchImageLibraryAsync({
@@ -173,7 +171,6 @@ const AddCar = () => {
                     </View>
 
                 </View>
-
                 {/* INFO TILES */}
                 <View className="mt-6 gap-y-3">
                     <View className="flex-row items-center bg-[#EFF6FF] p-4 rounded-xl">
@@ -196,7 +193,6 @@ const AddCar = () => {
                     <Text className="text-gray-900 text-center font-semibold">Cancel</Text>
                 </TouchableOpacity>
             </ScrollView>
-
         </SafeAreaView>
 
     );
