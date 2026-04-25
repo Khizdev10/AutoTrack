@@ -23,12 +23,9 @@ const AddCar = () => {
     useEffect(() => {
         async function fetchCarData() {
             try {
-                // 1. Get the special Clerk token configured for Supabase
                 const token = await getToken({ template: 'supabase' });
                 if (!token) return;
-                // 2. Initialize the Supabase client with the Clerk token
                 const supabase = createClerkSupabaseClient(token);
-                // 3. Fetch data securely!
                 const { data, error } = await supabase.from('cars').select('*');
 
                 if (data) setCars(data);
