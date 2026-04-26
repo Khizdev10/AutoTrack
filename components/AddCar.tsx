@@ -20,20 +20,21 @@ const AddCar = () => {
 
 
     useEffect(() => {
-        // async function fetchCarData() {
-        //     try {
-        //         const token = await getToken({ template: 'supabase' });
-        //         if (!token) return;
-        //         const supabase = createClerkSupabaseClient(token);
-        //         const { data, error } = await supabase.from('cars').select('*');
+        async function fetchCarData() {
+            try {
+                const token = await getToken({ template: 'supabase' });
+                if (!token) return;
+                const supabase = createClerkSupabaseClient(token);
+                const { data, error } = await supabase.from('cars').select('*');
 
-        //         if (data) setCars(data);
-        //         if (error) console.error("Error fetching cars:", error);
-        //     } catch (err) {
-        //         console.error(err);
-        //     }
-        // }
-        // fetchCarData();
+                if (data) setCars(data);
+                if (error) console.error("Error fetching cars:", error);
+            } catch (err) {
+                console.error(err);
+            }
+            console.log(cars)
+        }
+        fetchCarData();
     }, [getToken]);
 
     const saveCarData = async () => {
