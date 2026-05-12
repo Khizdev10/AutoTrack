@@ -28,7 +28,7 @@ const AddCar = () => {
                 const { data, error } = await supabase.from('cars').select('*');
 
                 if (data) setCars(data);
-                if (error) console.error("Error fetching cars:", error);
+                if (error) console.error("Error fetching cars (message):", error.message, " | code:", error.code, " | details:", error.details);
             } catch (err) {
                 console.error(err);
             }
