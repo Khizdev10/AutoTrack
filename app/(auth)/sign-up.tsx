@@ -3,6 +3,7 @@ import * as Linking from "expo-linking";
 import { type Href, Link, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React from "react";
+import { useWarmUpBrowser } from "../../hooks/useWarmUpBrowser";
 import {
     KeyboardAvoidingView,
     Platform,
@@ -17,6 +18,7 @@ import {
 WebBrowser.maybeCompleteAuthSession();
 
 export default function SignUp() {
+    useWarmUpBrowser();
     const { signUp, errors, fetchStatus } = useSignUp();
     const router = useRouter();
 
