@@ -11,7 +11,7 @@ import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
 const AddCar = () => {
     const [cars, setCars] = useState<any[]>([]);
-    const { getToken } = useAuth();
+    const { getToken, userId } = useAuth();
     const [vehicleMake, setVehicleMake] = useState("");
     const [modelName, setModelName] = useState("");
     const [productionYear, setProductionYear] = useState("");
@@ -44,6 +44,7 @@ const AddCar = () => {
             const supabase = createClerkSupabaseClient(token);
             const { data, error } = await supabase.from('cars').insert([
                 {
+                    user_id: userId,
                     vehicleMake,
                     modelName,
                     productionYear,
