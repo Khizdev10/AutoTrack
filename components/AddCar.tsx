@@ -9,8 +9,11 @@ import { useEffect, useState } from 'react';
 import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
-const AddCar = () => {
-    const [cars, setCars] = useState<any[]>([]);
+interface AddCarProps {
+    onCarAdded: () => void;
+}
+
+const AddCar = ({ onCarAdded }: AddCarProps) => {
     const { getToken, userId } = useAuth();
     const [vehicleMake, setVehicleMake] = useState("");
     const [modelName, setModelName] = useState("");
@@ -18,24 +21,6 @@ const AddCar = () => {
     const [currentMileage, setCurrentMileage] = useState("");
     const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000');
 
-
-    useEffect(() => {
-        async function fetchCarData() {
-            try {
-                const token = await getToken({ template: 'supabase' });
-                if (!token) return;
-                const supabase = createClerkSupabaseClient(token);
-                const { data, error } = await supabase.from('cars').select('*');
-
-                if (data) setCars(data);
-                if (error) console.error("Error fetching cars (message):", error.message, " | code:", error.code, " | details:", error.details);
-            } catch (err) {
-                console.error(err);
-            }
-            console.log(cars)
-        }
-        fetchCarData();
-    }, [getToken]);
 
     const saveCarData = async () => {
         try {
@@ -52,8 +37,10 @@ const AddCar = () => {
                     imageUrl,
                 },
             ]);
-
-            if (data) console.log("Car added successfully:", data);
+            if (data) {
+                console.log("Car added successfully:", data);
+                onCarAdded();
+            }
             if (error) console.error("Error adding car:", error);
         } catch (err) {
             console.error(err);
