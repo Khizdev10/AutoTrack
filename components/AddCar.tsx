@@ -11,9 +11,10 @@ import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
 interface AddCarProps {
     onCarAdded: () => void;
+    onCancel?: () => void;
 }
 
-const AddCar = ({ onCarAdded }: AddCarProps) => {
+const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
     const { getToken, userId } = useAuth();
     const [vehicleMake, setVehicleMake] = useState("");
     const [modelName, setModelName] = useState("");
@@ -173,14 +174,16 @@ const AddCar = ({ onCarAdded }: AddCarProps) => {
                 </View>
 
                 {/* BUTTONS */}
-                <TouchableOpacity className="bg-black py-5 rounded-2xl mt-8 flex-row justify-center items-center">
-                    <Text className="text-white font-bold text-lg mr-2" onPress={saveCarData}>Save Vehicle Details</Text>
+                <TouchableOpacity className="bg-black py-5 rounded-2xl mt-8 flex-row justify-center items-center" onPress={saveCarData}>
+                    <Text className="text-white font-bold text-lg mr-2">Save Vehicle Details</Text>
                     <Ionicons name="chevron-forward" size={20} color="white" />
                 </TouchableOpacity>
 
-                <TouchableOpacity className="py-5 rounded-2xl mt-2 mb-10 border border-gray-200 bg-white mb-40">
-                    <Text className="text-gray-900 text-center font-semibold">Cancel</Text>
-                </TouchableOpacity>
+                {onCancel && (
+                    <TouchableOpacity className="py-5 rounded-2xl mt-2 mb-40 border border-gray-200 bg-white" onPress={onCancel}>
+                        <Text className="text-gray-900 text-center font-semibold">Cancel</Text>
+                    </TouchableOpacity>
+                )}
             </ScrollView>
         </SafeAreaView>
 

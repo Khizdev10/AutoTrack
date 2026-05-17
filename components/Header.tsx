@@ -8,12 +8,16 @@ const Header = () => {
     const { user } = useUser();
     return (
         <View className="flex-row items-center justify-between px-6 py-4 bg-white">
-            <View className="flex-row items-center">
-                <Ionicons name="car" size={28} color="#2563eb" />
-                <Text className="text-xl font-bold text-gray-900 ml-2">DriveTrack</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={{ backgroundColor: "#2563EB", borderRadius: 12, width: 36, height: 36, justifyContent: "center", alignItems: "center" }}>
+                    <Ionicons name="car-sport" size={20} color="#fff" />
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827", letterSpacing: -0.5 }}>
+                    Auto<Text style={{ color: "#2563EB" }}>Track</Text>
+                </Text>
             </View>
+
             <View className="flex-row items-center">
-                <Ionicons name="search-outline" size={24} color="black" className="mr-4" />
                 {user?.imageUrl ? (
                     <Image
                         source={{ uri: user.imageUrl }}
