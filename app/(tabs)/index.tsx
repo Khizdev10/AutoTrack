@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { styled } from "nativewind";
 import { useEffect, useState } from "react";
 import {
@@ -30,6 +31,22 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddCar, setShowAddCar] = useState(false);
+  const [selectedCarForMenu, setSelectedCarForMenu] = useState<any>(null);
+
+  const getServiceStatus = (car: any) => {
+    if (!car.service_schedules || car.service_schedules.length === 0) {
+      return { label: "Active", bg: "#DCFCE7", text: "#166534" };
+    }
+    const currentMileage = parseInt(car.currentMileage || 0);
+    const hasOverdue = car.service_schedules.some((schedule: any) => {
+      const nextMiles = (schedule.last_service_mileage || 0) + schedule.interval_miles;
+      return currentMileage >= nextMiles;
+    });
+    if (hasOverdue) {
+      return { label: "Service Needed", bg: "#FEF3C7", text: "#92400E" };
+    }
+    return { label: "Active", bg: "#DCFCE7", text: "#166534" };
+  };
 
   const filteredCars = cars.filter((car) =>
     `${car.vehicleMake} ${car.modelName}`.toLowerCase().includes(searchQuery.toLowerCase())
@@ -41,6 +58,11 @@ export default function App() {
   const [editYear, setEditYear] = useState("");
   const [editMileage, setEditMileage] = useState("");
   const [editImageUrl, setEditImageUrl] = useState("");
+  const [editVin, setEditVin] = useState("");
+  const [editNickname, setEditNickname] = useState("");
+  const [editFuelRange, setEditFuelRange] = useState("");
+  const [editAvgConsumption, setEditAvgConsumption] = useState("");
+  const [editTirePressure, setEditTirePressure] = useState("");
 
   const { getToken } = useAuth();
 
@@ -52,7 +74,7 @@ export default function App() {
       const supabase = createClerkSupabaseClient(token);
       const { data, error } = await supabase
         .from("cars")
-        .select("*")
+        .select("*, service_schedules(*)")
         .order("created_at", { ascending: false });
       if (data) setCars(data);
       if (error) console.error("Error fetching cars:", error);
@@ -90,6 +112,11 @@ export default function App() {
           productionYear: editYear,
           currentMileage: editMileage,
           imageUrl: editImageUrl,
+          vin: editVin,
+          nickname: editNickname,
+          fuel_range: editFuelRange ? parseInt(editFuelRange) : null,
+          avg_consumption: editAvgConsumption ? parseFloat(editAvgConsumption) : null,
+          tire_pressure: editTirePressure ? parseInt(editTirePressure) : null,
         })
         .eq("id", carToEdit.id);
       if (error) console.error("Error updating car:", error);
@@ -108,6 +135,11 @@ export default function App() {
     setEditYear(car.productionYear || "");
     setEditMileage(car.currentMileage?.toString() || "");
     setEditImageUrl(car.imageUrl || "");
+    setEditVin(car.vin || "");
+    setEditNickname(car.nickname || "");
+    setEditFuelRange(car.fuel_range?.toString() || "");
+    setEditAvgConsumption(car.avg_consumption?.toString() || "");
+    setEditTirePressure(car.tire_pressure?.toString() || "");
     setCarToEdit(car);
   };
 
@@ -218,7 +250,7 @@ export default function App() {
             </TouchableOpacity>
 
             {/* Input Fields */}
-            <View style={{ gap: 12 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 20 }} style={{ maxHeight: 350 }}>
               {/* Row: Make + Model */}
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <View style={{ flex: 1 }}>
@@ -266,7 +298,7 @@ export default function App() {
                   </View>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Mileage (mi)</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Odometer (km)</Text>
                   <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
                     <Ionicons name="speedometer-outline" size={16} color="#94A3B8" />
                     <TextInput
@@ -280,7 +312,89 @@ export default function App() {
                   </View>
                 </View>
               </View>
-            </View>
+
+              {/* Row: Nickname + VIN */}
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Nickname (Optional)</Text>
+                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                    <Ionicons name="pricetag-outline" size={16} color="#94A3B8" />
+                    <TextInput
+                      value={editNickname}
+                      onChangeText={setEditNickname}
+                      placeholder="e.g. Silver Bullet"
+                      placeholderTextColor="#94A3B8"
+                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                    />
+                  </View>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>VIN (Optional)</Text>
+                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                    <Ionicons name="barcode-outline" size={16} color="#94A3B8" />
+                    <TextInput
+                      value={editVin}
+                      onChangeText={setEditVin}
+                      placeholder="e.g. 1HGCM..."
+                      placeholderTextColor="#94A3B8"
+                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Row: Fuel Range + MPG */}
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Fuel Range (km) (Optional)</Text>
+                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                    <Ionicons name="water-outline" size={16} color="#94A3B8" />
+                    <TextInput
+                      value={editFuelRange}
+                      onChangeText={setEditFuelRange}
+                      placeholder="350"
+                      keyboardType="numeric"
+                      placeholderTextColor="#94A3B8"
+                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                    />
+                  </View>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Avg km/l (Optional)</Text>
+                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                    <Ionicons name="leaf-outline" size={16} color="#94A3B8" />
+                    <TextInput
+                      value={editAvgConsumption}
+                      onChangeText={setEditAvgConsumption}
+                      placeholder="24.5"
+                      keyboardType="numeric"
+                      placeholderTextColor="#94A3B8"
+                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Row: Tire Pressure */}
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Tire Pressure (Optional)</Text>
+                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                    <Ionicons name="disc-outline" size={16} color="#94A3B8" />
+                    <TextInput
+                      value={editTirePressure}
+                      onChangeText={setEditTirePressure}
+                      placeholder="32"
+                      keyboardType="numeric"
+                      placeholderTextColor="#94A3B8"
+                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                    />
+                  </View>
+                </View>
+                <View style={{ flex: 1 }} />
+              </View>
+
+            </ScrollView>
 
             {/* Save Button */}
             <TouchableOpacity
@@ -331,8 +445,8 @@ export default function App() {
             {/* Feature pills */}
             {[
               { icon: "shield-checkmark-outline", label: "Secure & private data" },
-              { icon: "speedometer-outline",       label: "Track mileage over time" },
-              { icon: "construct-outline",         label: "Log maintenance records" },
+              { icon: "speedometer-outline", label: "Track mileage over time" },
+              { icon: "construct-outline", label: "Log maintenance records" },
             ].map((f, i) => (
               <View key={i} style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 16, paddingHorizontal: 20, paddingVertical: 14, marginBottom: 12, width: "100%", borderWidth: 1, borderColor: "#F1F5F9", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
                 <View style={{ backgroundColor: "#EFF6FF", borderRadius: 10, padding: 8, marginRight: 14 }}>
@@ -372,7 +486,7 @@ export default function App() {
           </View>
 
           {/* Blended Search Bar */}
-          <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#EAEFF5", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, borderWidth: 1, borderColor: "#E2E8F0" }}>
             <Ionicons name="search-outline" size={17} color="#94A3B8" />
             <TextInput
               value={searchQuery}
@@ -388,64 +502,169 @@ export default function App() {
             )}
           </View>
 
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 16, paddingBottom: 80 }}>
+          {/* ── Car Action Menu Modal (Three Dots Menu) ── */}
+          <Modal
+            transparent
+            visible={!!selectedCarForMenu}
+            animationType="slide"
+            onRequestClose={() => setSelectedCarForMenu(null)}
+          >
+            <TouchableOpacity 
+              activeOpacity={1} 
+              onPress={() => setSelectedCarForMenu(null)} 
+              style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}
+            >
+              <TouchableOpacity 
+                activeOpacity={1}
+                style={{ backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 }}
+              >
+                <Text style={{ fontSize: 16, fontWeight: "800", color: "#1F2937", marginBottom: 6, textAlign: "center" }}>
+                  {selectedCarForMenu?.nickname || `${selectedCarForMenu?.vehicleMake} ${selectedCarForMenu?.modelName}`}
+                </Text>
+                <Text style={{ fontSize: 12, color: "#6B7280", marginBottom: 20, textAlign: "center" }}>
+                  Manage vehicle settings and details
+                </Text>
+                
+                <View style={{ gap: 10 }}>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      const car = selectedCarForMenu;
+                      setSelectedCarForMenu(null);
+                      openEditModal(car);
+                    }}
+                    style={{ backgroundColor: "#F3F4F6", borderRadius: 16, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+                  >
+                    <Ionicons name="create-outline" size={20} color="#374151" />
+                    <Text style={{ color: "#374151", fontWeight: "700", fontSize: 15 }}>Edit Details</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    onPress={() => {
+                      const car = selectedCarForMenu;
+                      setSelectedCarForMenu(null);
+                      setCarToDelete(car);
+                    }}
+                    style={{ backgroundColor: "#FEE2E2", borderRadius: 16, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                    <Text style={{ color: "#EF4444", fontWeight: "700", fontSize: 15 }}>Delete Vehicle</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    onPress={() => setSelectedCarForMenu(null)}
+                    style={{ paddingVertical: 14, alignItems: "center" }}
+                  >
+                    <Text style={{ color: "#94A3B8", fontWeight: "600", fontSize: 14 }}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </Modal>
+
+          <View style={{ flexDirection: "column", gap: 20, paddingBottom: 80 }}>
             {filteredCars.length === 0 ? (
               <View style={{ width: "100%", alignItems: "center", paddingVertical: 48 }}>
                 <Ionicons name="search-outline" size={40} color="#CBD5E1" />
                 <Text style={{ color: "#94A3B8", fontWeight: "600", fontSize: 15, marginTop: 12 }}>No cars match "{searchQuery}"</Text>
               </View>
-            ) : filteredCars.map((car, index) => (
-              <View key={index} style={{ width: "48%", borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 }}>
+            ) : filteredCars.map((car, index) => {
+              const status = getServiceStatus(car);
+              
+              // Dynamic secondary stat configuration
+              let stat2Icon = "water-outline";
+              let stat2Label = "Range";
+              let stat2Value = car.fuel_range ? `${car.fuel_range} km` : "--";
 
-                {/* Full-bleed image area */}
-                <View style={{ height: 160, position: "relative", backgroundColor: "#0f172a" }}>
-                  <Image
-                    source={{ uri: car.imageUrl || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000" }}
-                    style={{ width: "100%", height: "100%" }}
-                    resizeMode="cover"
-                  />
+              if (!car.fuel_range) {
+                if (car.tire_pressure) {
+                  stat2Icon = "aperture-outline";
+                  stat2Label = "Tire Pressure";
+                  stat2Value = `${car.tire_pressure} psi`;
+                } else if (car.avg_consumption) {
+                  stat2Icon = "leaf-outline";
+                  stat2Label = "Consumption";
+                  stat2Value = `${car.avg_consumption} km/l`;
+                }
+              }
 
-                  {/* Prominent dark bluish gradient overlay */}
-                  <LinearGradient
-                    colors={["rgba(30,58,138,0.35)", "rgba(23,37,84,0.75)", "rgba(2,6,23,0.95)"]}
-                    style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }}
-                  />
+              return (
+                <TouchableOpacity 
+                  key={index} 
+                  activeOpacity={0.9} 
+                  onPress={() => router.push(`/car/${car.id}`)} 
+                  style={{ width: "100%", backgroundColor: "#fff", borderRadius: 24, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 15, elevation: 3, borderWidth: 1, borderColor: "#F1F5F9" }}
+                >
+                  {/* Full-bleed image area */}
+                  <View style={{ height: 200, position: "relative", backgroundColor: "#0f172a" }}>
+                    <Image
+                      source={{ uri: car.imageUrl || "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?q=80&w=1000" }}
+                      style={{ width: "100%", height: "100%" }}
+                      resizeMode="cover"
+                    />
 
-                  {/* Year badge — top left */}
-                  <View style={{ position: "absolute", top: 10, left: 10, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
-                    <Text style={{ color: "#fff", fontSize: 9, fontWeight: "700", letterSpacing: 1 }}>{car.productionYear}</Text>
-                  </View>
-
-                  {/* Action buttons — top right */}
-                  <View style={{ position: "absolute", top: 8, right: 8, flexDirection: "row", gap: 6 }}>
-                    <TouchableOpacity
-                      onPress={() => openEditModal(car)}
-                      style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 999, padding: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" }}
-                    >
-                      <Ionicons name="pencil-outline" size={16} color="#fff" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setCarToDelete(car)}
-                      style={{ backgroundColor: "rgba(239,68,68,0.25)", borderRadius: 999, padding: 10, borderWidth: 1, borderColor: "rgba(239,68,68,0.4)" }}
-                    >
-                      <Ionicons name="trash-outline" size={16} color="#fca5a5" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Car info overlaid on dark overlay */}
-                  <View style={{ position: "absolute", bottom: 12, left: 12, right: 12 }}>
-                    <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800", letterSpacing: -0.3 }} numberOfLines={1}>
-                      {car.vehicleMake} {car.modelName}
-                    </Text>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
-                      <Ionicons name="speedometer-outline" size={12} color="#94A3B8" />
-                      <Text style={{ fontSize: 11, color: "#cbd5e1", fontWeight: "600" }}>{Number(car.currentMileage)?.toLocaleString() || "0"} mi</Text>
+                    {/* Status badge — top right */}
+                    <View style={{ position: "absolute", top: 12, right: 12, backgroundColor: status.bg, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+                      <Text style={{ color: status.text, fontSize: 10, fontWeight: "800", letterSpacing: 0.5 }}>{status.label.toUpperCase()}</Text>
                     </View>
                   </View>
-                </View>
 
-              </View>
-            ))}
+                  {/* Details section */}
+                  <View style={{ padding: 20 }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text style={{ fontSize: 18, fontWeight: "800", color: "#111827" }}>
+                          {car.nickname || `${car.vehicleMake} ${car.modelName}`}
+                        </Text>
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: "#94A3B8", marginTop: 4, letterSpacing: 0.5 }}>
+                          {car.vehicleMake.toUpperCase()} {car.modelName.toUpperCase()} • {car.productionYear}
+                        </Text>
+                      </View>
+                      <TouchableOpacity 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          setSelectedCarForMenu(car);
+                        }} 
+                        style={{ padding: 8, marginRight: -8 }}
+                      >
+                        <Ionicons name="ellipsis-vertical" size={18} color="#94A3B8" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Separator line */}
+                    <View style={{ height: 1, backgroundColor: "#F1F5F9", marginVertical: 16 }} />
+
+                    {/* Stats section */}
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      {/* Odometer */}
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                        <View style={{ backgroundColor: "#EFF6FF", padding: 8, borderRadius: 10 }}>
+                          <Ionicons name="speedometer-outline" size={16} color="#2563EB" />
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "700", letterSpacing: 0.2 }}>Mileage</Text>
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E293B", marginTop: 2 }}>
+                            {Number(car.currentMileage || 0).toLocaleString()} km
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Secondary Dynamic Stat */}
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                        <View style={{ backgroundColor: "#EFF6FF", padding: 8, borderRadius: 10 }}>
+                          <Ionicons name={stat2Icon as any} size={16} color="#2563EB" />
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "700", letterSpacing: 0.2 }}>{stat2Label}</Text>
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E293B", marginTop: 2 }}>
+                            {stat2Value}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
       )}
