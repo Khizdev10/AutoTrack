@@ -190,17 +190,22 @@ export default function CarDetailScreen() {
         if (remaining <= 0) {
           await Notifications.scheduleNotificationAsync({
             content: {
-              title: `⚠️ Service Overdue: ${carData.vehicleMake} ${carData.modelName}`,
-              body: `Your ${schedule.service_type} is overdue by ${Math.abs(remaining).toLocaleString()} km. Please perform maintenance soon!`,
+              title: "⚠️ Maintenance Overdue",
+              subtitle: `${carData.vehicleMake} ${carData.modelName}`,
+              body: `Your ${schedule.service_type} has exceeded its interval by ${Math.abs(remaining).toLocaleString()} km.\nTap here to log this service now.`,
+              color: "#EF4444", // Red tint on Android
               sound: true,
+              badge: 1,
             },
             trigger: null,
           });
         } else if (remaining <= 500) {
           await Notifications.scheduleNotificationAsync({
             content: {
-              title: `🔧 Service Due Soon: ${carData.vehicleMake} ${carData.modelName}`,
-              body: `Your ${schedule.service_type} is due in ${Math.round(remaining).toLocaleString()} km.`,
+              title: "🔧 Service Reminder",
+              subtitle: `${carData.vehicleMake} ${carData.modelName}`,
+              body: `Your ${schedule.service_type} is due in ${Math.round(remaining).toLocaleString()} km.\nKeep your vehicle running smoothly!`,
+              color: "#3B82F6", // Blue tint on Android
               sound: true,
             },
             trigger: null,
