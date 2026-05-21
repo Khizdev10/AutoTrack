@@ -591,7 +591,7 @@ export default function App() {
                 <TouchableOpacity 
                   key={index} 
                   activeOpacity={0.9} 
-                  onPress={() => router.push(`/car/${car.id}`)} 
+                  onPress={() => router.push(`/car/${car.id}` as any)} 
                   style={{ width: "100%", backgroundColor: "#fff", borderRadius: 24, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 15, elevation: 3, borderWidth: 1, borderColor: "#F1F5F9" }}
                 >
                   {/* Full-bleed image area */}

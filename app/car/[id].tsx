@@ -2,14 +2,14 @@ import { createClerkSupabaseClient } from "@/app/lib/supabase";
 import Header from "@/components/Header";
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
-import * as TaskManager from "expo-task-manager";
 import * as Notifications from "expo-notifications";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as TaskManager from "expo-task-manager";
 import { styled } from "nativewind";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -26,15 +26,15 @@ const SafeAreaView = styled(RNSafeAreaView);
 
 // Haversine formula
 function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371; 
+  const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -53,41 +53,41 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       try {
         const newLocation = locations[0];
         const storedDataStr = await AsyncStorage.getItem("temp_trip_tracking");
-        let trackingData = storedDataStr 
-          ? JSON.parse(storedDataStr) 
+        let trackingData = storedDataStr
+          ? JSON.parse(storedDataStr)
           : { tripDistance: 0, lastCoords: null };
-          
+
         if (trackingData.lastCoords) {
           const lat1 = trackingData.lastCoords.latitude;
           const lon1 = trackingData.lastCoords.longitude;
           const lat2 = newLocation.coords.latitude;
           const lon2 = newLocation.coords.longitude;
-          
+
           // Haversine formula
           const R = 6371; // km
           const dLat = (lat2 - lat1) * Math.PI / 180;
           const dLon = (lon2 - lon1) * Math.PI / 180;
-          const a = 
+          const a =
             Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
           const dist = R * c; // distance in km
-          
+
           // Speed filtering: walking speed is usually under 2.2 m/s (~8 km/h).
           const speed = newLocation.coords.speed;
           const isDriving = speed === null || speed === undefined || speed > 2.2;
-          
+
           if (isDriving && dist > 0) {
             trackingData.tripDistance += dist;
           }
         }
-        
+
         trackingData.lastCoords = {
           latitude: newLocation.coords.latitude,
           longitude: newLocation.coords.longitude
         };
-        
+
         await AsyncStorage.setItem("temp_trip_tracking", JSON.stringify(trackingData));
       } catch (err) {
         console.error("Error saving background location:", err);
@@ -122,7 +122,7 @@ export default function CarDetailScreen() {
   const [newScheduleType, setNewScheduleType] = useState("");
   const [newScheduleIntervalMiles, setNewScheduleIntervalMiles] = useState("");
   const [newScheduleIntervalMonths, setNewScheduleIntervalMonths] = useState("");
-  
+
   // Form states - Log
   const [newLogType, setNewLogType] = useState("");
   const [newLogMileage, setNewLogMileage] = useState("");
@@ -181,12 +181,12 @@ export default function CarDetailScreen() {
       if (status !== 'granted') {
         await Notifications.requestPermissionsAsync();
       }
-      
+
       const currentMileage = parseInt(carData.currentMileage || 0);
       for (const schedule of schedulesList) {
         const nextMiles = (schedule.last_service_mileage || 0) + schedule.interval_miles;
         const remaining = nextMiles - currentMileage;
-        
+
         if (remaining <= 0) {
           await Notifications.scheduleNotificationAsync({
             content: {
@@ -268,8 +268,8 @@ export default function CarDetailScreen() {
   const handleManualMileageUpdate = async () => {
     const miles = parseInt(manualMileage);
     if (isNaN(miles)) {
-       setShowUpdateMileageModal(false);
-       return;
+      setShowUpdateMileageModal(false);
+      return;
     }
     setIsSaving(true);
     await updateCarMileage(miles);
@@ -293,16 +293,16 @@ export default function CarDetailScreen() {
       } catch (err) {
         console.error("Error stopping location updates:", err);
       }
-      
+
       setIsTracking(false);
-      
+
       const storedDataStr = await AsyncStorage.getItem("temp_trip_tracking");
       let finalDistance = 0;
       if (storedDataStr) {
         const trackingData = JSON.parse(storedDataStr);
         finalDistance = trackingData.tripDistance;
       }
-      
+
       if (finalDistance > 0 && car) {
         const newTotal = (car.currentMileage || 0) + Math.round(finalDistance);
         await updateCarMileage(newTotal);
@@ -321,7 +321,7 @@ export default function CarDetailScreen() {
         alert('Background location permission (Allow all the time) is required to track in background.');
         return;
       }
-      
+
       await Notifications.requestPermissionsAsync();
       await AsyncStorage.setItem("temp_trip_tracking", JSON.stringify({ tripDistance: 0, lastCoords: null }));
 
@@ -391,15 +391,15 @@ export default function CarDetailScreen() {
 
       if (!error) {
         if (parseInt(newLogMileage) > (car?.currentMileage || 0)) {
-           await updateCarMileage(parseInt(newLogMileage));
+          await updateCarMileage(parseInt(newLogMileage));
         }
 
         const scheduleToUpdate = schedules.find(s => s.service_type.toLowerCase() === newLogType.toLowerCase());
         if (scheduleToUpdate) {
-            await supabase.from("service_schedules").update({
-                last_service_mileage: parseInt(newLogMileage),
-                last_service_date: new Date().toISOString()
-            }).eq("id", scheduleToUpdate.id);
+          await supabase.from("service_schedules").update({
+            last_service_mileage: parseInt(newLogMileage),
+            last_service_date: new Date().toISOString()
+          }).eq("id", scheduleToUpdate.id);
         }
       }
     } finally {
@@ -438,32 +438,34 @@ export default function CarDetailScreen() {
   let urgentPercentage = 100;
 
   schedules.forEach(schedule => {
-     const nextMiles = (schedule.last_service_mileage || 0) + schedule.interval_miles;
-     const remaining = nextMiles - currentDisplayMileage;
-     if (remaining < lowestMilesRemaining) {
-         lowestMilesRemaining = remaining;
-         mostUrgentSchedule = schedule;
-         const used = currentDisplayMileage - (schedule.last_service_mileage || 0);
-         urgentPercentage = Math.max(0, 100 - (used / schedule.interval_miles * 100));
-     }
+    const nextMiles = (schedule.last_service_mileage || 0) + schedule.interval_miles;
+    const remaining = nextMiles - currentDisplayMileage;
+    if (remaining < lowestMilesRemaining) {
+      lowestMilesRemaining = remaining;
+      mostUrgentSchedule = schedule;
+      const used = currentDisplayMileage - (schedule.last_service_mileage || 0);
+      urgentPercentage = Math.max(0, 100 - (used / schedule.interval_miles * 100));
+    }
   });
 
   return (
     <SafeAreaView className="flex-1 bg-[#F1F5F9]" edges={["top"]}>
-      <Header 
-        showBack 
+      <Header
+        showBack
         hideProfile
         title={`${car.vehicleMake} ${car.modelName}`}
         subtitle={car.vin ? `VIN: ${car.vin}` : undefined}
         rightElement={
-          <TouchableOpacity onPress={() => setShowUpdateMileageModal(true)} style={{ backgroundColor: "#E0E7FF", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
-              <Text style={{ color: "#4338CA", fontSize: 11, fontWeight: "800" }}>UPDATE ODOMETER</Text>
+          <TouchableOpacity onPress={(
+
+          ) => setShowUpdateMileageModal(true)} style={{ backgroundColor: "#E0E7FF", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
+            <Text style={{ color: "#4338CA", fontSize: 11, fontWeight: "800" }}>UPDATE ODOMETER</Text>
           </TouchableOpacity>
         }
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-        
+
         {/* HERO CARD */}
         <View style={{ backgroundColor: "#111827", borderRadius: 24, overflow: "hidden", height: 260, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 }}>
           <Image
@@ -490,9 +492,9 @@ export default function CarDetailScreen() {
         </View>
 
         {/* DRIVE MODE TOGGLE */}
-        <TouchableOpacity 
-           onPress={toggleDriveMode}
-           style={{ marginBottom: 20, backgroundColor: isTracking ? "#EF4444" : "#2563EB", borderRadius: 16, paddingVertical: 14, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 }}
+        <TouchableOpacity
+          onPress={toggleDriveMode}
+          style={{ marginBottom: 20, backgroundColor: isTracking ? "#EF4444" : "#2563EB", borderRadius: 16, paddingVertical: 14, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 }}
         >
           <Ionicons name={isTracking ? "stop-circle" : "navigate"} size={20} color="#fff" />
           <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
@@ -513,7 +515,7 @@ export default function CarDetailScreen() {
           <View style={{ width: "50%" }}>
             <Text style={{ fontSize: 10, fontWeight: "800", color: "#64748B", letterSpacing: 0.5, marginBottom: 6 }}>LAST SERVICE</Text>
             <Text style={{ fontSize: 16, color: "#1E293B", fontWeight: "700" }}>
-               {logs.length > 0 ? new Date(logs[0].date_performed).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "--"}
+              {logs.length > 0 ? new Date(logs[0].date_performed).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "--"}
             </Text>
           </View>
           <View style={{ width: "50%" }}>
@@ -537,7 +539,7 @@ export default function CarDetailScreen() {
             </View>
           </View>
           <View style={{ backgroundColor: "#F5F5F5", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
-             <Text style={{ color: "#737373", fontSize: 11, fontWeight: "700" }}>{logs.filter(l => l.cost).length} Logs</Text>
+            <Text style={{ color: "#737373", fontSize: 11, fontWeight: "700" }}>{logs.filter(l => l.cost).length} Logs</Text>
           </View>
         </View>
 
@@ -555,13 +557,13 @@ export default function CarDetailScreen() {
             <View>
               {/* Progress Indicator (CSS fallback for Circular) */}
               <View style={{ alignItems: "center", marginBottom: 24 }}>
-                 <View style={{ width: 140, height: 140, borderRadius: 70, borderWidth: 12, borderColor: "#EFF6FF", justifyContent: "center", alignItems: "center", position: "relative" }}>
-                    {/* Simulated progress arc using borders - simple implementation */}
-                    <View style={{ position: "absolute", top: -12, left: -12, right: -12, bottom: -12, borderRadius: 82, borderWidth: 12, borderColor: lowestMilesRemaining < 0 ? "#EF4444" : "#3B82F6", borderTopColor: "transparent", borderRightColor: urgentPercentage < 50 ? "transparent" : (lowestMilesRemaining < 0 ? "#EF4444" : "#3B82F6"), transform: [{ rotate: "-45deg" }] }} />
-                    
-                    <Text style={{ fontSize: 28, fontWeight: "800", color: "#1E293B" }}>{Math.max(0, Math.round(urgentPercentage))}%</Text>
-                    <Text style={{ fontSize: 10, fontWeight: "700", color: "#64748B", letterSpacing: 0.5, marginTop: 4 }}>LIFE LEFT</Text>
-                 </View>
+                <View style={{ width: 140, height: 140, borderRadius: 70, borderWidth: 12, borderColor: "#EFF6FF", justifyContent: "center", alignItems: "center", position: "relative" }}>
+                  {/* Simulated progress arc using borders - simple implementation */}
+                  <View style={{ position: "absolute", top: -12, left: -12, right: -12, bottom: -12, borderRadius: 82, borderWidth: 12, borderColor: lowestMilesRemaining < 0 ? "#EF4444" : "#3B82F6", borderTopColor: "transparent", borderRightColor: urgentPercentage < 50 ? "transparent" : (lowestMilesRemaining < 0 ? "#EF4444" : "#3B82F6"), transform: [{ rotate: "-45deg" }] }} />
+
+                  <Text style={{ fontSize: 28, fontWeight: "800", color: "#1E293B" }}>{Math.max(0, Math.round(urgentPercentage))}%</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#64748B", letterSpacing: 0.5, marginTop: 4 }}>LIFE LEFT</Text>
+                </View>
               </View>
 
               <View style={{ backgroundColor: "#F8FAFC", borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -571,12 +573,12 @@ export default function CarDetailScreen() {
                     {mostUrgentSchedule.service_type} in {Math.max(0, lowestMilesRemaining).toLocaleString()} km
                   </Text>
                   {lowestMilesRemaining < 0 && (
-                     <Text style={{ fontSize: 12, fontWeight: "700", color: "#EF4444", marginTop: 2 }}>Currently OVERDUE!</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: "#EF4444", marginTop: 2 }}>Currently OVERDUE!</Text>
                   )}
                 </View>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => openLogModal(mostUrgentSchedule.service_type)}
                 style={{ backgroundColor: "#000", borderRadius: 16, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
               >
@@ -585,12 +587,12 @@ export default function CarDetailScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-             <View style={{ alignItems: "center", paddingVertical: 20 }}>
-                <Text style={{ color: "#94A3B8", fontWeight: "600", marginBottom: 16 }}>No maintenance schedules set.</Text>
-                <TouchableOpacity onPress={() => setShowScheduleModal(true)} style={{ backgroundColor: "#F1F5F9", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}>
-                   <Text style={{ color: "#3B82F6", fontWeight: "700" }}>+ Add Schedule</Text>
-                </TouchableOpacity>
-             </View>
+            <View style={{ alignItems: "center", paddingVertical: 20 }}>
+              <Text style={{ color: "#94A3B8", fontWeight: "600", marginBottom: 16 }}>No maintenance schedules set.</Text>
+              <TouchableOpacity onPress={() => setShowScheduleModal(true)} style={{ backgroundColor: "#F1F5F9", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}>
+                <Text style={{ color: "#3B82F6", fontWeight: "700" }}>+ Add Schedule</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -599,18 +601,18 @@ export default function CarDetailScreen() {
           <View style={{ marginBottom: 20 }}>
             <Text style={{ fontSize: 12, fontWeight: "800", color: "#64748B", letterSpacing: 1, marginBottom: 12, marginLeft: 4 }}>OTHER SCHEDULES</Text>
             {schedules.filter(s => s.id !== mostUrgentSchedule?.id).map(schedule => {
-                const remaining = (schedule.last_service_mileage || 0) + schedule.interval_miles - currentDisplayMileage;
-                return (
-                  <View key={schedule.id} style={{ backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                     <View>
-                       <Text style={{ fontWeight: "700", color: "#1E293B", fontSize: 15 }}>{schedule.service_type}</Text>
-                       <Text style={{ color: "#64748B", fontSize: 12, marginTop: 2 }}>{remaining > 0 ? `in ${remaining.toLocaleString()} km` : 'Overdue'}</Text>
-                     </View>
-                     <TouchableOpacity onPress={() => openLogModal(schedule.service_type)} style={{ backgroundColor: "#F1F5F9", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
-                        <Text style={{ color: "#3B82F6", fontSize: 11, fontWeight: "800" }}>LOG</Text>
-                     </TouchableOpacity>
+              const remaining = (schedule.last_service_mileage || 0) + schedule.interval_miles - currentDisplayMileage;
+              return (
+                <View key={schedule.id} style={{ backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View>
+                    <Text style={{ fontWeight: "700", color: "#1E293B", fontSize: 15 }}>{schedule.service_type}</Text>
+                    <Text style={{ color: "#64748B", fontSize: 12, marginTop: 2 }}>{remaining > 0 ? `in ${remaining.toLocaleString()} km` : 'Overdue'}</Text>
                   </View>
-                )
+                  <TouchableOpacity onPress={() => openLogModal(schedule.service_type)} style={{ backgroundColor: "#F1F5F9", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
+                    <Text style={{ color: "#3B82F6", fontSize: 11, fontWeight: "800" }}>LOG</Text>
+                  </TouchableOpacity>
+                </View>
+              )
             })}
           </View>
         )}
@@ -620,7 +622,7 @@ export default function CarDetailScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <Text style={{ fontSize: 14, fontWeight: "800", color: "#334155", letterSpacing: 1 }}>RECENT ACTIVITY</Text>
             <TouchableOpacity onPress={() => openLogModal()}>
-               <Text style={{ fontSize: 12, fontWeight: "700", color: "#3B82F6" }}>Add Log</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: "#3B82F6" }}>Add Log</Text>
             </TouchableOpacity>
           </View>
 
@@ -655,7 +657,7 @@ export default function CarDetailScreen() {
           <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 28, width: "100%", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}>
             <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827", textAlign: "center", marginBottom: 8 }}>Update Odometer</Text>
             <Text style={{ fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24 }}>Enter your current odometer reading (km).</Text>
-            
+
             <TextInput
               value={manualMileage}
               onChangeText={setManualMileage}
@@ -689,7 +691,7 @@ export default function CarDetailScreen() {
             <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 10 }}>Quick Presets</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
               {PRESET_SCHEDULES.map((preset) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={preset.label}
                   onPress={() => {
                     setNewScheduleType(preset.label);
