@@ -616,8 +616,6 @@ export default function CarDetailScreen() {
             })}
           </View>
         )}
-
-        {/* RECENT ACTIVITY */}
         <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 24, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <Text style={{ fontSize: 14, fontWeight: "800", color: "#334155", letterSpacing: 1 }}>RECENT ACTIVITY</Text>
@@ -625,7 +623,6 @@ export default function CarDetailScreen() {
               <Text style={{ fontSize: 12, fontWeight: "700", color: "#3B82F6" }}>Add Log</Text>
             </TouchableOpacity>
           </View>
-
           {logs.length === 0 ? (
             <Text style={{ color: "#94A3B8", textAlign: "center", marginVertical: 20, fontWeight: "600" }}>No recent activity.</Text>
           ) : (
