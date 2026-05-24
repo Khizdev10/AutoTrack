@@ -555,10 +555,8 @@ export default function CarDetailScreen() {
 
           {mostUrgentSchedule ? (
             <View>
-              {/* Progress Indicator (CSS fallback for Circular) */}
               <View style={{ alignItems: "center", marginBottom: 24 }}>
                 <View style={{ width: 140, height: 140, borderRadius: 70, borderWidth: 12, borderColor: "#EFF6FF", justifyContent: "center", alignItems: "center", position: "relative" }}>
-                  {/* Simulated progress arc using borders - simple implementation */}
                   <View style={{ position: "absolute", top: -12, left: -12, right: -12, bottom: -12, borderRadius: 82, borderWidth: 12, borderColor: lowestMilesRemaining < 0 ? "#EF4444" : "#3B82F6", borderTopColor: "transparent", borderRightColor: urgentPercentage < 50 ? "transparent" : (lowestMilesRemaining < 0 ? "#EF4444" : "#3B82F6"), transform: [{ rotate: "-45deg" }] }} />
 
                   <Text style={{ fontSize: 28, fontWeight: "800", color: "#1E293B" }}>{Math.max(0, Math.round(urgentPercentage))}%</Text>
@@ -595,8 +593,6 @@ export default function CarDetailScreen() {
             </View>
           )}
         </View>
-
-        {/* ALL SCHEDULES LIST */}
         {schedules.length > 1 && (
           <View style={{ marginBottom: 20 }}>
             <Text style={{ fontSize: 12, fontWeight: "800", color: "#64748B", letterSpacing: 1, marginBottom: 12, marginLeft: 4 }}>OTHER SCHEDULES</Text>
