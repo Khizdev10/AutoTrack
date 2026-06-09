@@ -657,7 +657,6 @@ export default function CarDetailScreen() {
               keyboardType="numeric"
               style={{ backgroundColor: "#F1F5F9", borderRadius: 16, padding: 16, fontSize: 24, fontWeight: "700", textAlign: "center", color: "#1E293B", marginBottom: 24 }}
             />
-
             <View style={{ flexDirection: "row", gap: 12 }}>
               <TouchableOpacity onPress={() => setShowUpdateMileageModal(false)} style={{ flex: 1, backgroundColor: "#F1F5F9", paddingVertical: 16, borderRadius: 16, alignItems: "center" }}>
                 <Text style={{ color: "#475569", fontWeight: "700", fontSize: 16 }}>Cancel</Text>
@@ -669,7 +668,6 @@ export default function CarDetailScreen() {
           </View>
         </View>
       </Modal>
-
       {/* ── Schedule Modal ── */}
       <Modal visible={showScheduleModal} transparent animationType="slide">
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
@@ -680,7 +678,6 @@ export default function CarDetailScreen() {
                 <Ionicons name="close" size={20} color="#374151" />
               </TouchableOpacity>
             </View>
-
             <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 10 }}>Quick Presets</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
               {PRESET_SCHEDULES.map((preset) => (

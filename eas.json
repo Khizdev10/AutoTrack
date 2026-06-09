@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "version": ">= 16.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_YmFsYW5jZWQtc2F3Zmx5LTQ2LmNsZXJrLmFjY291bnRzLmRldiQ",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://fwkjvzpkcdzhnwdfbdew.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_QpnQTUTr5A5wmpLBHL8YBg_QBT2_xsS"
+      }
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
+  }
+}
