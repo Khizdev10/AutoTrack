@@ -6,8 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { styled } from 'nativewind';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface AddCarProps {
     onCarAdded: () => void;
@@ -18,6 +18,7 @@ const SafeAreaView = styled(RNSafeAreaView);
 
 const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
     const { getToken, userId } = useAuth();
+    const insets = useSafeAreaInsets();
     const [vehicleMake, setVehicleMake] = useState("");
     const [modelName, setModelName] = useState("");
     const [productionYear, setProductionYear] = useState("");
@@ -85,9 +86,10 @@ const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
 
     return (
 
-        <SafeAreaView className="flex-1 bg-[#F8FAFC]">
+        <RNSafeAreaView style={{ flex: 1, backgroundColor: "#F8FAFC" }} edges={['top']}>
 
-            <ScrollView showsVerticalScrollIndicator={false} className="px-5" contentContainerStyle={{ paddingBottom: 48 }}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" className="px-5" contentContainerStyle={{ paddingBottom: 48 + insets.bottom }}>
                 <View className="items-center mt-4">
                     <View className="bg-blue-100 px-4 py-1 rounded-full">
                         <Text className="text-blue-600 font-bold text-[10px] tracking-widest">REGISTRATION</Text>
@@ -287,7 +289,8 @@ const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
                     </TouchableOpacity>
                 )}
             </ScrollView>
-        </SafeAreaView>
+            </KeyboardAvoidingView>
+        </RNSafeAreaView>
 
     );
 };

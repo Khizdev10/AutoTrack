@@ -13,14 +13,16 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
@@ -101,12 +103,17 @@ const PRESET_SCHEDULES = [
   { label: "Tire Rotation", interval: "12000" },
   { label: "Air Filter", interval: "24000" },
   { label: "Brake Pads", interval: "40000" },
+  { label: "Coolant Flush", interval: "50000" },
+  { label: "Spark Plugs", interval: "30000" },
+  { label: "AC Service", interval: "20000" },
+  { label: "Transmission Oil", interval: "60000" },
 ];
 
 export default function CarDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { getToken } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [car, setCar] = useState<any>(null);
   const [schedules, setSchedules] = useState<any[]>([]);
@@ -122,6 +129,7 @@ export default function CarDetailScreen() {
   const [newScheduleType, setNewScheduleType] = useState("");
   const [newScheduleIntervalMiles, setNewScheduleIntervalMiles] = useState("");
   const [newScheduleIntervalMonths, setNewScheduleIntervalMonths] = useState("");
+  const scheduleTypeInputRef = useRef<any>(null);
 
   // Form states - Log
   const [newLogType, setNewLogType] = useState("");
@@ -464,7 +472,7 @@ export default function CarDetailScreen() {
         }
       />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 60 + insets.bottom }}>
 
         {/* HERO CARD */}
         <View style={{ backgroundColor: "#111827", borderRadius: 24, overflow: "hidden", height: 210, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 }}>
@@ -646,154 +654,177 @@ export default function CarDetailScreen() {
 
       {/* ── Manual Mileage Update Modal ── */}
       <Modal visible={showUpdateMileageModal} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 24 }}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 28, width: "100%", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}>
-            <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827", textAlign: "center", marginBottom: 8 }}>Update Odometer</Text>
-            <Text style={{ fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24 }}>Enter your current odometer reading (km).</Text>
-
-            <TextInput
-              value={manualMileage}
-              onChangeText={setManualMileage}
-              keyboardType="numeric"
-              style={{ backgroundColor: "#F1F5F9", borderRadius: 16, padding: 16, fontSize: 24, fontWeight: "700", textAlign: "center", color: "#1E293B", marginBottom: 24 }}
-            />
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <TouchableOpacity onPress={() => setShowUpdateMileageModal(false)} style={{ flex: 1, backgroundColor: "#F1F5F9", paddingVertical: 16, borderRadius: 16, alignItems: "center" }}>
-                <Text style={{ color: "#475569", fontWeight: "700", fontSize: 16 }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleManualMileageUpdate} disabled={isSaving} style={{ flex: 1, backgroundColor: "#2563EB", paddingVertical: 16, borderRadius: 16, alignItems: "center" }}>
-                {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save</Text>}
-              </TouchableOpacity>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 24 }}>
+            <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 28, width: "100%", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827", textAlign: "center", marginBottom: 8 }}>Update Odometer</Text>
+              <Text style={{ fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24 }}>Enter your current odometer reading (km).</Text>
+              <TextInput
+                value={manualMileage}
+                onChangeText={setManualMileage}
+                keyboardType="numeric"
+                style={{ backgroundColor: "#F1F5F9", borderRadius: 16, padding: 16, fontSize: 24, fontWeight: "700", textAlign: "center", color: "#1E293B", marginBottom: 24 }}
+              />
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <TouchableOpacity onPress={() => setShowUpdateMileageModal(false)} style={{ flex: 1, backgroundColor: "#F1F5F9", paddingVertical: 16, borderRadius: 16, alignItems: "center" }}>
+                  <Text style={{ color: "#475569", fontWeight: "700", fontSize: 16 }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleManualMileageUpdate} disabled={isSaving} style={{ flex: 1, backgroundColor: "#2563EB", paddingVertical: 16, borderRadius: 16, alignItems: "center" }}>
+                  {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save</Text>}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
+
       {/* ── Schedule Modal ── */}
       <Modal visible={showScheduleModal} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 40 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>Add Reminder</Text>
-              <TouchableOpacity onPress={() => setShowScheduleModal(false)} style={{ backgroundColor: "#F1F5F9", borderRadius: 50, padding: 8 }}>
-                <Ionicons name="close" size={20} color="#374151" />
-              </TouchableOpacity>
-            </View>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 10 }}>Quick Presets</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
-              {PRESET_SCHEDULES.map((preset) => (
-                <TouchableOpacity
-                  key={preset.label}
-                  onPress={() => {
-                    setNewScheduleType(preset.label);
-                    setNewScheduleIntervalMiles(preset.interval);
-                  }}
-                  style={{ backgroundColor: "#EFF6FF", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: "#BFDBFE" }}
-                >
-                  <Text style={{ color: "#2563EB", fontWeight: "600", fontSize: 13 }}>{preset.label}</Text>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+            <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 48 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>Add Reminder</Text>
+                <TouchableOpacity onPress={() => setShowScheduleModal(false)} style={{ backgroundColor: "#F1F5F9", borderRadius: 50, padding: 8 }}>
+                  <Ionicons name="close" size={20} color="#374151" />
                 </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={{ gap: 16 }}>
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Service Type</Text>
-                <TextInput
-                  value={newScheduleType}
-                  onChangeText={setNewScheduleType}
-                  placeholder="e.g. Tire Rotation, Oil Change"
-                  style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 }}
-                />
               </View>
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Interval (km)</Text>
-                <TextInput
-                  value={newScheduleIntervalMiles}
-                  onChangeText={setNewScheduleIntervalMiles}
-                  placeholder="e.g. 5000"
-                  keyboardType="numeric"
-                  style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 }}
-                />
+
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 10 }}>Quick Presets</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                {PRESET_SCHEDULES.map((preset) => (
+                  <TouchableOpacity
+                    key={preset.label}
+                    onPress={() => { setNewScheduleType(preset.label); setNewScheduleIntervalMiles(preset.interval); }}
+                    style={{
+                      backgroundColor: newScheduleType === preset.label ? "#2563EB" : "#EFF6FF",
+                      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
+                      borderWidth: 1, borderColor: newScheduleType === preset.label ? "#2563EB" : "#BFDBFE"
+                    }}
+                  >
+                    <Text style={{ color: newScheduleType === preset.label ? "#fff" : "#2563EB", fontWeight: "600", fontSize: 13 }}>{preset.label}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity
+                  onPress={() => { setNewScheduleType(""); setNewScheduleIntervalMiles(""); setTimeout(() => scheduleTypeInputRef.current?.focus(), 100); }}
+                  style={{ backgroundColor: "#F3F4F6", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: "#D1D5DB", flexDirection: "row", alignItems: "center", gap: 4 }}
+                >
+                  <Ionicons name="pencil" size={13} color="#6B7280" />
+                  <Text style={{ color: "#6B7280", fontWeight: "600", fontSize: 13 }}>Custom...</Text>
+                </TouchableOpacity>
               </View>
-            </View>
 
-            <TouchableOpacity
-              onPress={addSchedule}
-              disabled={isSaving}
-              style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 28 }}
-            >
-              {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Reminder</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── Log Service Modal ── */}
-      <Modal visible={showLogModal} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 40 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>Log Service</Text>
-              <TouchableOpacity onPress={() => setShowLogModal(false)} style={{ backgroundColor: "#F1F5F9", borderRadius: 50, padding: 8 }}>
-                <Ionicons name="close" size={20} color="#374151" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={{ gap: 16 }}>
+              <View style={{ gap: 14 }}>
                 <View>
                   <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Service Type</Text>
                   <TextInput
-                    value={newLogType}
-                    onChangeText={setNewLogType}
-                    placeholder="e.g. Oil Change"
-                    style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 }}
+                    ref={scheduleTypeInputRef}
+                    value={newScheduleType}
+                    onChangeText={setNewScheduleType}
+                    placeholder="Select a preset or type your own..."
+                    placeholderTextColor="#94A3B8"
+                    style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
                   />
                 </View>
-                <View style={{ flexDirection: "row", gap: 12 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Odometer (km)</Text>
-                    <TextInput
-                      value={newLogMileage}
-                      onChangeText={setNewLogMileage}
-                      placeholder={currentDisplayMileage?.toString() || "0"}
-                      keyboardType="numeric"
-                      style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 }}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Cost (Rs.) - Optional</Text>
-                    <TextInput
-                      value={newLogCost}
-                      onChangeText={setNewLogCost}
-                      placeholder="0.00"
-                      keyboardType="numeric"
-                      style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 }}
-                    />
-                  </View>
-                </View>
                 <View>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Notes (Optional)</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Interval (km)</Text>
                   <TextInput
-                    value={newLogNotes}
-                    onChangeText={setNewLogNotes}
-                    placeholder="e.g. Used synthetic oil"
-                    multiline
-                    style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, minHeight: 80, textAlignVertical: "top" }}
+                    value={newScheduleIntervalMiles}
+                    onChangeText={setNewScheduleIntervalMiles}
+                    placeholder="e.g. 5000"
+                    keyboardType="numeric"
+                    placeholderTextColor="#94A3B8"
+                    style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
                   />
                 </View>
               </View>
 
               <TouchableOpacity
-                onPress={addLog}
+                onPress={addSchedule}
                 disabled={isSaving}
-                style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 28 }}
+                style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 24 }}
               >
-                {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Log</Text>}
+                {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Reminder</Text>}
               </TouchableOpacity>
-            </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
+
+      {/* ── Log Service Modal ── */}
+      <Modal visible={showLogModal} transparent animationType="slide">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+            <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 40 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>Log Service</Text>
+                <TouchableOpacity onPress={() => setShowLogModal(false)} style={{ backgroundColor: "#F1F5F9", borderRadius: 50, padding: 8 }}>
+                  <Ionicons name="close" size={20} color="#374151" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <View style={{ gap: 16 }}>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Service Type</Text>
+                    <TextInput
+                      value={newLogType}
+                      onChangeText={setNewLogType}
+                      placeholder="e.g. Oil Change"
+                      placeholderTextColor="#94A3B8"
+                      style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
+                    />
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Odometer (km)</Text>
+                      <TextInput
+                        value={newLogMileage}
+                        onChangeText={setNewLogMileage}
+                        placeholder={currentDisplayMileage?.toString() || "0"}
+                        keyboardType="numeric"
+                        placeholderTextColor="#94A3B8"
+                        style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Cost (Rs.) - Optional</Text>
+                      <TextInput
+                        value={newLogCost}
+                        onChangeText={setNewLogCost}
+                        placeholder="0.00"
+                        keyboardType="numeric"
+                        placeholderTextColor="#94A3B8"
+                        style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
+                      />
+                    </View>
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Notes (Optional)</Text>
+                    <TextInput
+                      value={newLogNotes}
+                      onChangeText={setNewLogNotes}
+                      placeholder="e.g. Used synthetic oil"
+                      multiline
+                      placeholderTextColor="#94A3B8"
+                      style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, minHeight: 80, textAlignVertical: "top", color: "#111827" }}
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  onPress={addLog}
+                  disabled={isSaving}
+                  style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 28, marginBottom: 8 }}
+                >
+                  {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Log</Text>}
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
 
     </SafeAreaView>
   );

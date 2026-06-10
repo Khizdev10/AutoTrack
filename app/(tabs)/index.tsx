@@ -12,19 +12,22 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
 export default function App() {
   const [cars, setCars] = useState<any[]>([]);
+  const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
   const [carToDelete, setCarToDelete] = useState<any>(null);
   const [carToEdit, setCarToEdit] = useState<any>(null);
@@ -217,6 +220,7 @@ export default function App() {
         animationType="slide"
         onRequestClose={() => setCarToEdit(null)}
       >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 40 }}>
 
@@ -413,7 +417,9 @@ export default function App() {
 
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
+
 
       {isLoading ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -427,7 +433,7 @@ export default function App() {
       ) : cars.length === 0 ? (
         /* ── Welcome / Onboarding Screen ── */
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-          <View style={{ flex: 1, alignItems: "center", paddingHorizontal: 28, paddingTop: 48, paddingBottom: 48 }}>
+          <View style={{ flex: 1, alignItems: "center", paddingHorizontal: 28, paddingTop: 48, paddingBottom: 48 + insets.bottom }}>
 
             {/* Hero icon */}
             <View style={{ width: 120, height: 120, borderRadius: 36, backgroundColor: "#EFF6FF", justifyContent: "center", alignItems: "center", marginBottom: 28, borderWidth: 1, borderColor: "#BFDBFE" }}>
@@ -561,7 +567,7 @@ export default function App() {
             </TouchableOpacity>
           </Modal>
 
-          <View style={{ flexDirection: "column", gap: 20, paddingBottom: 80 }}>
+          <View style={{ flexDirection: "column", gap: 20, paddingBottom: 100 + insets.bottom }}>
             {filteredCars.length === 0 ? (
               <View style={{ width: "100%", alignItems: "center", paddingVertical: 48 }}>
                 <Ionicons name="search-outline" size={40} color="#CBD5E1" />
