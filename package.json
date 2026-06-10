@@ -53,6 +53,7 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
+    "@expo/config-plugins": "^56.0.8",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",

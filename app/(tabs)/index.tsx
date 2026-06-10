@@ -250,7 +250,7 @@ export default function App() {
             </TouchableOpacity>
 
             {/* Input Fields */}
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 20 }} style={{ maxHeight: 350 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 20 }} style={{ maxHeight: 420 }}>
               {/* Row: Make + Model */}
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <View style={{ flex: 1 }}>

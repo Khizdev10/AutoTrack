@@ -87,8 +87,8 @@ const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
 
         <SafeAreaView className="flex-1 bg-[#F8FAFC]">
 
-            <ScrollView showsVerticalScrollIndicator={false} className="px-5">
-                <View className="items-center mt-8">
+            <ScrollView showsVerticalScrollIndicator={false} className="px-5" contentContainerStyle={{ paddingBottom: 48 }}>
+                <View className="items-center mt-4">
                     <View className="bg-blue-100 px-4 py-1 rounded-full">
                         <Text className="text-blue-600 font-bold text-[10px] tracking-widest">REGISTRATION</Text>
                     </View>
@@ -99,7 +99,7 @@ const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
                 </View>
 
                 {/* HERO IMAGE CARD */}
-                <View className="mt-8 rounded-3xl overflow-hidden h-48 bg-black relative">
+                <View className="mt-5 rounded-3xl overflow-hidden h-40 bg-black relative">
                     <Image
                         source={{ uri: imageUrl }}
                         className="w-full h-full opacity-70"
@@ -116,7 +116,7 @@ const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
                 </View>
 
                 {/* INPUT FIELDS (Mimicking the design) */}
-                <View className="mt-8 gap-y-4">
+                <View className="mt-5 gap-y-3">
                     <View>
                         <Text className="text-gray-700 font-semibold mb-2">Vehicle Make</Text>
                         <View className="bg-[#F1F5F9] border border-gray-200 rounded-xl flex-row items-center p-4">
@@ -254,7 +254,7 @@ const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
 
                 </View>
                 {/* INFO TILES */}
-                <View className="mt-6 gap-y-3">
+                <View className="mt-4 gap-y-3">
                     <View className="flex-row items-center bg-[#EFF6FF] p-4 rounded-xl">
                         <Ionicons name="shield-checkmark" size={20} color="#2563eb" />
                         <Text className="ml-3 text-gray-700 text-sm">Data is encrypted and stored locally.</Text>
@@ -267,7 +267,7 @@ const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
 
                 {/* BUTTONS */}
                 <TouchableOpacity 
-                    className="bg-black py-5 rounded-2xl mt-8 flex-row justify-center items-center" 
+                    className="bg-black py-4 rounded-2xl mt-5 flex-row justify-center items-center" 
                     onPress={saveCarData}
                     disabled={isSaving}
                 >

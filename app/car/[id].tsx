@@ -467,7 +467,7 @@ export default function CarDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
 
         {/* HERO CARD */}
-        <View style={{ backgroundColor: "#111827", borderRadius: 24, overflow: "hidden", height: 260, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 }}>
+        <View style={{ backgroundColor: "#111827", borderRadius: 24, overflow: "hidden", height: 210, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 }}>
           <Image
             source={{ uri: car.imageUrl || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000" }}
             style={{ width: "100%", height: "100%", opacity: 0.9 }}
