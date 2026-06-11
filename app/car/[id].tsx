@@ -124,6 +124,15 @@ export default function CarDetailScreen() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [showUpdateMileageModal, setShowUpdateMileageModal] = useState(false);
+  const [showPetrolModal, setShowPetrolModal] = useState(false);
+  const [showLogActionMenu, setShowLogActionMenu] = useState(false);
+  const [showPetrolActionMenu, setShowPetrolActionMenu] = useState(false);
+
+  // Edit mode tracking
+  const [editingLogId, setEditingLogId] = useState<number | null>(null);
+  const [editingPetrolLogId, setEditingPetrolLogId] = useState<number | null>(null);
+  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [selectedPetrolLog, setSelectedPetrolLog] = useState<any>(null);
 
   // Form states - Schedule
   const [newScheduleType, setNewScheduleType] = useState("");
@@ -137,7 +146,16 @@ export default function CarDetailScreen() {
   const [newLogCost, setNewLogCost] = useState("");
   const [newLogNotes, setNewLogNotes] = useState("");
 
+  // Form states - Petrol
+  const [petrolLogs, setPetrolLogs] = useState<any[]>([]);
+  const [newPetrolLiters, setNewPetrolLiters] = useState("");
+  const [newPetrolPricePerLiter, setNewPetrolPricePerLiter] = useState("");
+  const [newPetrolMileage, setNewPetrolMileage] = useState("");
+  const [newPetrolNotes, setNewPetrolNotes] = useState("");
+
   const [manualMileage, setManualMileage] = useState("");
+
+  const totalPetrolSpent = petrolLogs.reduce((sum, log) => sum + (log.total_cost || 0), 0);
 
   // GPS State
   const [isTracking, setIsTracking] = useState(false);
@@ -243,6 +261,9 @@ export default function CarDetailScreen() {
 
       const { data: logData } = await supabase.from("service_logs").select("*").eq("car_id", id).order("date_performed", { ascending: false });
       if (logData) setLogs(logData);
+
+      const { data: petrolData } = await supabase.from("petrol_logs").select("*").eq("car_id", id).order("date", { ascending: false });
+      if (petrolData) setPetrolLogs(petrolData);
 
       if (carData && scheduleData) {
         await checkServiceReminders(carData, scheduleData);
@@ -386,39 +407,144 @@ export default function CarDetailScreen() {
       if (!token) return;
       const supabase = createClerkSupabaseClient(token);
 
-      const { error } = await supabase.from("service_logs").insert([
-        {
+      if (editingLogId) {
+        // UPDATE existing log
+        await supabase.from("service_logs").update({
+          service_type: newLogType,
+          mileage_at_service: parseInt(newLogMileage),
+          cost: newLogCost ? parseFloat(newLogCost) : null,
+          notes: newLogNotes,
+        }).eq("id", editingLogId);
+      } else {
+        // INSERT new log
+        const { error } = await supabase.from("service_logs").insert([{
           car_id: id,
           service_type: newLogType,
           mileage_at_service: parseInt(newLogMileage),
           cost: newLogCost ? parseFloat(newLogCost) : null,
           notes: newLogNotes,
           date_performed: new Date().toISOString(),
-        },
-      ]);
+        }]);
 
-      if (!error) {
-        if (parseInt(newLogMileage) > (car?.currentMileage || 0)) {
-          await updateCarMileage(parseInt(newLogMileage));
-        }
-
-        const scheduleToUpdate = schedules.find(s => s.service_type.toLowerCase() === newLogType.toLowerCase());
-        if (scheduleToUpdate) {
-          await supabase.from("service_schedules").update({
-            last_service_mileage: parseInt(newLogMileage),
-            last_service_date: new Date().toISOString()
-          }).eq("id", scheduleToUpdate.id);
+        if (!error) {
+          if (parseInt(newLogMileage) > (car?.currentMileage || 0)) {
+            await updateCarMileage(parseInt(newLogMileage));
+          }
+          const scheduleToUpdate = schedules.find(s => s.service_type.toLowerCase() === newLogType.toLowerCase());
+          if (scheduleToUpdate) {
+            await supabase.from("service_schedules").update({
+              last_service_mileage: parseInt(newLogMileage),
+              last_service_date: new Date().toISOString()
+            }).eq("id", scheduleToUpdate.id);
+          }
         }
       }
     } finally {
       setIsSaving(false);
       setShowLogModal(false);
+      setEditingLogId(null);
       fetchCarDetails();
       setNewLogType("");
       setNewLogMileage("");
       setNewLogCost("");
       setNewLogNotes("");
     }
+  };
+
+  const addPetrolLog = async () => {
+    if (!newPetrolLiters || !newPetrolPricePerLiter) return;
+    setIsSaving(true);
+    try {
+      const token = await getToken({ template: "supabase" });
+      if (!token) return;
+      const supabase = createClerkSupabaseClient(token);
+
+      const liters = parseFloat(newPetrolLiters);
+      const pricePerLiter = parseFloat(newPetrolPricePerLiter);
+      const totalCost = Math.round(liters * pricePerLiter);
+
+      if (editingPetrolLogId) {
+        // UPDATE existing petrol log
+        await supabase.from("petrol_logs").update({
+          liters,
+          price_per_liter: pricePerLiter,
+          total_cost: totalCost,
+          mileage_at_fillup: newPetrolMileage ? parseInt(newPetrolMileage) : null,
+          notes: newPetrolNotes || null,
+        }).eq("id", editingPetrolLogId);
+      } else {
+        // INSERT new petrol log
+        const { error } = await supabase.from("petrol_logs").insert([{
+          car_id: id,
+          liters,
+          price_per_liter: pricePerLiter,
+          total_cost: totalCost,
+          mileage_at_fillup: newPetrolMileage ? parseInt(newPetrolMileage) : null,
+          notes: newPetrolNotes || null,
+          date: new Date().toISOString(),
+        }]);
+
+        if (!error && newPetrolMileage) {
+          const mileage = parseInt(newPetrolMileage);
+          if (mileage > (car?.currentMileage || 0)) {
+            await updateCarMileage(mileage);
+          }
+        }
+      }
+    } finally {
+      setIsSaving(false);
+      setShowPetrolModal(false);
+      setEditingPetrolLogId(null);
+      fetchCarDetails();
+      setNewPetrolLiters("");
+      setNewPetrolPricePerLiter("");
+      setNewPetrolMileage("");
+      setNewPetrolNotes("");
+    }
+  };
+
+  const deleteServiceLog = async (logId: number) => {
+    try {
+      const token = await getToken({ template: "supabase" });
+      if (!token) return;
+      const supabase = createClerkSupabaseClient(token);
+      await supabase.from("service_logs").delete().eq("id", logId);
+      fetchCarDetails();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deletePetrolLog = async (logId: number) => {
+    try {
+      const token = await getToken({ template: "supabase" });
+      if (!token) return;
+      const supabase = createClerkSupabaseClient(token);
+      await supabase.from("petrol_logs").delete().eq("id", logId);
+      fetchCarDetails();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const openEditServiceLog = (log: any) => {
+    setEditingLogId(log.id);
+    setNewLogType(log.service_type);
+    setNewLogMileage(log.mileage_at_service?.toString() || "");
+    setNewLogCost(log.cost?.toString() || "");
+    setNewLogNotes(log.notes || "");
+    setShowLogActionMenu(false);
+    setShowLogModal(true);
+  };
+
+  const openEditPetrolLog = (log: any) => {
+    setEditingPetrolLogId(log.id);
+    setNewPetrolLiters(log.liters?.toString() || "");
+    setNewPetrolPricePerLiter(log.price_per_liter?.toString() || "");
+    setNewPetrolMileage(log.mileage_at_fillup?.toString() || "");
+    setNewPetrolNotes(log.notes || "");
+    setShowPetrolActionMenu(false);
+    setShowPetrolModal(true);
   };
 
   if (isLoading) {
@@ -551,6 +677,22 @@ export default function CarDetailScreen() {
           </View>
         </View>
 
+        {/* PETROL SPEND CARD */}
+        <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ backgroundColor: "#DCFCE7", padding: 12, borderRadius: 16 }}>
+              <Ionicons name="flame-outline" size={24} color="#16A34A" />
+            </View>
+            <View>
+              <Text style={{ fontSize: 10, fontWeight: "800", color: "#64748B", letterSpacing: 0.5, marginBottom: 4 }}>TOTAL PETROL SPEND</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#1E293B" }}>Rs. {totalPetrolSpent.toLocaleString()}</Text>
+            </View>
+          </View>
+          <View style={{ backgroundColor: "#F5F5F5", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
+            <Text style={{ color: "#737373", fontSize: 11, fontWeight: "700" }}>{petrolLogs.length} Fill-ups</Text>
+          </View>
+        </View>
+
         {/* MAINTENANCE CARD */}
         <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 24, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -644,6 +786,62 @@ export default function CarDetailScreen() {
                     <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{log.cost ? `-Rs. ${log.cost.toLocaleString()}` : '--'}</Text>
                     <Text style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{new Date(log.date_performed).toLocaleDateString()}</Text>
                   </View>
+                  <TouchableOpacity
+                    onPress={() => { setSelectedLog(log); setShowLogActionMenu(true); }}
+                    style={{ padding: 8, marginLeft: 8 }}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* PETROL LOGS CARD */}
+        <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 24, marginTop: 20, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="flame" size={16} color="#16A34A" />
+              <Text style={{ fontSize: 14, fontWeight: "800", color: "#334155", letterSpacing: 1 }}>PETROL LOGS</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowPetrolModal(true)}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: "#16A34A" }}>+ Add Fill-up</Text>
+            </TouchableOpacity>
+          </View>
+          {petrolLogs.length === 0 ? (
+            <View style={{ alignItems: "center", paddingVertical: 20 }}>
+              <View style={{ backgroundColor: "#DCFCE7", padding: 16, borderRadius: 50, marginBottom: 12 }}>
+                <Ionicons name="flame-outline" size={28} color="#16A34A" />
+              </View>
+              <Text style={{ color: "#94A3B8", fontWeight: "600", marginBottom: 12 }}>No petrol logs yet.</Text>
+              <TouchableOpacity onPress={() => setShowPetrolModal(true)} style={{ backgroundColor: "#F0FDF4", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}>
+                <Text style={{ color: "#16A34A", fontWeight: "700" }}>Log your first fill-up</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={{ gap: 20 }}>
+              {petrolLogs.map((log, i) => (
+                <View key={log.id} style={{ flexDirection: "row", alignItems: "center", borderTopWidth: i === 0 ? 0 : 1, borderTopColor: "#F1F5F9", paddingTop: i === 0 ? 0 : 20 }}>
+                  <View style={{ backgroundColor: "#DCFCE7", padding: 12, borderRadius: 12, marginRight: 16 }}>
+                    <Ionicons name="flame" size={20} color="#16A34A" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: "#1E293B" }}>{log.liters} L @ Rs. {log.price_per_liter}/L</Text>
+                    <Text style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
+                      {log.mileage_at_fillup?.toLocaleString()} km{log.notes ? ` • ${log.notes}` : ''}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>-Rs. {log.total_cost?.toLocaleString()}</Text>
+                    <Text style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{new Date(log.date).toLocaleDateString()}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => { setSelectedPetrolLog(log); setShowPetrolActionMenu(true); }}
+                    style={{ padding: 8, marginLeft: 8 }}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
                 </View>
               ))}
             </View>
@@ -651,6 +849,171 @@ export default function CarDetailScreen() {
         </View>
 
       </ScrollView>
+
+      {/* ── Service Log Action Menu ── */}
+      <Modal
+        visible={showLogActionMenu}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        hardwareAccelerated
+        onRequestClose={() => setShowLogActionMenu(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowLogActionMenu(false)}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+        >
+          <TouchableOpacity activeOpacity={1} style={{ backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 36 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#94A3B8", textAlign: "center", marginBottom: 20 }}>
+              {selectedLog?.service_type}
+            </Text>
+            <TouchableOpacity
+              onPress={() => openEditServiceLog(selectedLog)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}
+            >
+              <View style={{ backgroundColor: "#EFF6FF", padding: 10, borderRadius: 12 }}>
+                <Ionicons name="pencil-outline" size={20} color="#2563EB" />
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: "#1E293B" }}>Edit Log</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => { setShowLogActionMenu(false); deleteServiceLog(selectedLog?.id); }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16 }}
+            >
+              <View style={{ backgroundColor: "#FEE2E2", padding: 10, borderRadius: 12 }}>
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: "#EF4444" }}>Delete Log</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Petrol Log Action Menu ── */}
+      <Modal
+        visible={showPetrolActionMenu}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        hardwareAccelerated
+        onRequestClose={() => setShowPetrolActionMenu(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowPetrolActionMenu(false)}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+        >
+          <TouchableOpacity activeOpacity={1} style={{ backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 36 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#94A3B8", textAlign: "center", marginBottom: 20 }}>
+              {selectedPetrolLog ? `${selectedPetrolLog.liters}L fill-up` : ""}
+            </Text>
+            <TouchableOpacity
+              onPress={() => openEditPetrolLog(selectedPetrolLog)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}
+            >
+              <View style={{ backgroundColor: "#F0FDF4", padding: 10, borderRadius: 12 }}>
+                <Ionicons name="pencil-outline" size={20} color="#16A34A" />
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: "#1E293B" }}>Edit Fill-up</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => { setShowPetrolActionMenu(false); deletePetrolLog(selectedPetrolLog?.id); }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16 }}
+            >
+              <View style={{ backgroundColor: "#FEE2E2", padding: 10, borderRadius: 12 }}>
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: "#EF4444" }}>Delete Fill-up</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Petrol Log Modal ── */}
+      <Modal
+        visible={showPetrolModal}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        hardwareAccelerated
+        onRequestClose={() => setShowPetrolModal(false)}
+      >
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+            <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 20, maxHeight: "90%" }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="flame" size={22} color="#16A34A" />
+                  <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>
+                    {editingPetrolLogId ? "Edit Fill-up" : "Log Fill-up"}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowPetrolModal(false)} style={{ backgroundColor: "#F1F5F9", borderRadius: 50, padding: 8 }}>
+                  <Ionicons name="close" size={20} color="#374151" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <View style={{ gap: 16 }}>
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Liters</Text>
+                      <TextInput
+                        value={newPetrolLiters}
+                        onChangeText={setNewPetrolLiters}
+                        placeholder="e.g. 35"
+                        keyboardType="numeric"
+                        placeholderTextColor="#94A3B8"
+                        style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Price per Liter (Rs.)</Text>
+                      <TextInput
+                        value={newPetrolPricePerLiter}
+                        onChangeText={setNewPetrolPricePerLiter}
+                        placeholder="e.g. 282"
+                        keyboardType="numeric"
+                        placeholderTextColor="#94A3B8"
+                        style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
+                      />
+                    </View>
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Odometer at Fill-up (km)</Text>
+                    <TextInput
+                      value={newPetrolMileage}
+                      onChangeText={setNewPetrolMileage}
+                      placeholder={currentDisplayMileage?.toString() || "0"}
+                      keyboardType="numeric"
+                      placeholderTextColor="#94A3B8"
+                      style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
+                    />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Notes (Optional)</Text>
+                    <TextInput
+                      value={newPetrolNotes}
+                      onChangeText={setNewPetrolNotes}
+                      placeholder="e.g. Full tank, highway trip"
+                      multiline
+                      placeholderTextColor="#94A3B8"
+                      style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, minHeight: 70, textAlignVertical: "top", color: "#111827" }}
+                    />
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={addPetrolLog}
+                  disabled={isSaving}
+                  style={{ backgroundColor: "#16A34A", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 24, marginBottom: 8 }}
+                >
+                  {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>{editingPetrolLogId ? "Save Changes" : "Save Fill-up"}</Text>}
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* ── Manual Mileage Update Modal ── */}
       <Modal
@@ -779,8 +1142,8 @@ export default function CarDetailScreen() {
         <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
             <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 20, maxHeight: "90%" }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>Log Service</Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>{editingLogId ? "Edit Log" : "Log Service"}</Text>
                 <TouchableOpacity onPress={() => setShowLogModal(false)} style={{ backgroundColor: "#F1F5F9", borderRadius: 50, padding: 8 }}>
                   <Ionicons name="close" size={20} color="#374151" />
                 </TouchableOpacity>
@@ -840,7 +1203,7 @@ export default function CarDetailScreen() {
                   disabled={isSaving}
                   style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 28, marginBottom: 8 }}
                 >
-                  {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Log</Text>}
+                  {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>{editingLogId ? "Save Changes" : "Save Log"}</Text>}
                 </TouchableOpacity>
               </ScrollView>
             </View>

@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { tabs } from './constants/data';
+import { tabs } from '../constants/data';
 
 const TabLayout = () => {
     const { isSignedIn, isLoaded } = useAuth();
