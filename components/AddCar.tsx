@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { styled } from 'nativewind';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, BackHandler, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface AddCarProps {
@@ -19,6 +19,24 @@ const SafeAreaView = styled(RNSafeAreaView);
 const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
     const { getToken, userId } = useAuth();
     const insets = useSafeAreaInsets();
+
+    useEffect(() => {
+        const backAction = () => {
+            if (onCancel) {
+                onCancel();
+                return true; // Intercepts the back action
+            }
+            return false; // Let the default back action happen
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            "hardwareBackPress",
+            backAction
+        );
+
+        return () => backHandler.remove();
+    }, [onCancel]);
+
     const [vehicleMake, setVehicleMake] = useState("");
     const [modelName, setModelName] = useState("");
     const [productionYear, setProductionYear] = useState("");

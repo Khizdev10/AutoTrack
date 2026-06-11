@@ -653,8 +653,15 @@ export default function CarDetailScreen() {
       </ScrollView>
 
       {/* ── Manual Mileage Update Modal ── */}
-      <Modal visible={showUpdateMileageModal} transparent animationType="fade">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <Modal
+        visible={showUpdateMileageModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        hardwareAccelerated
+        onRequestClose={() => setShowUpdateMileageModal(false)}
+      >
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 24 }}>
             <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 28, width: "100%", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}>
               <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827", textAlign: "center", marginBottom: 8 }}>Update Odometer</Text>
@@ -679,10 +686,17 @@ export default function CarDetailScreen() {
       </Modal>
 
       {/* ── Schedule Modal ── */}
-      <Modal visible={showScheduleModal} transparent animationType="slide">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <Modal
+        visible={showScheduleModal}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        hardwareAccelerated
+        onRequestClose={() => setShowScheduleModal(false)}
+      >
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
-            <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 48 }}>
+            <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 20, maxHeight: "90%" }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>Add Reminder</Text>
                 <TouchableOpacity onPress={() => setShowScheduleModal(false)} style={{ backgroundColor: "#F1F5F9", borderRadius: 50, padding: 8 }}>
@@ -690,72 +704,81 @@ export default function CarDetailScreen() {
                 </TouchableOpacity>
               </View>
 
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 10 }}>Quick Presets</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-                {PRESET_SCHEDULES.map((preset) => (
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 10 }}>Quick Presets</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                  {PRESET_SCHEDULES.map((preset) => (
+                    <TouchableOpacity
+                      key={preset.label}
+                      onPress={() => { setNewScheduleType(preset.label); setNewScheduleIntervalMiles(preset.interval); }}
+                      style={{
+                        backgroundColor: newScheduleType === preset.label ? "#2563EB" : "#EFF6FF",
+                        paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
+                        borderWidth: 1, borderColor: newScheduleType === preset.label ? "#2563EB" : "#BFDBFE"
+                      }}
+                    >
+                      <Text style={{ color: newScheduleType === preset.label ? "#fff" : "#2563EB", fontWeight: "600", fontSize: 13 }}>{preset.label}</Text>
+                    </TouchableOpacity>
+                  ))}
                   <TouchableOpacity
-                    key={preset.label}
-                    onPress={() => { setNewScheduleType(preset.label); setNewScheduleIntervalMiles(preset.interval); }}
-                    style={{
-                      backgroundColor: newScheduleType === preset.label ? "#2563EB" : "#EFF6FF",
-                      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
-                      borderWidth: 1, borderColor: newScheduleType === preset.label ? "#2563EB" : "#BFDBFE"
-                    }}
+                    onPress={() => { setNewScheduleType(""); setNewScheduleIntervalMiles(""); setTimeout(() => scheduleTypeInputRef.current?.focus(), 100); }}
+                    style={{ backgroundColor: "#F3F4F6", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: "#D1D5DB", flexDirection: "row", alignItems: "center", gap: 4 }}
                   >
-                    <Text style={{ color: newScheduleType === preset.label ? "#fff" : "#2563EB", fontWeight: "600", fontSize: 13 }}>{preset.label}</Text>
+                    <Ionicons name="pencil" size={13} color="#6B7280" />
+                    <Text style={{ color: "#6B7280", fontWeight: "600", fontSize: 13 }}>Custom...</Text>
                   </TouchableOpacity>
-                ))}
+                </View>
+
+                <View style={{ gap: 14 }}>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Service Type</Text>
+                    <TextInput
+                      ref={scheduleTypeInputRef}
+                      value={newScheduleType}
+                      onChangeText={setNewScheduleType}
+                      placeholder="Select a preset or type your own..."
+                      placeholderTextColor="#94A3B8"
+                      style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
+                    />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Interval (km)</Text>
+                    <TextInput
+                      value={newScheduleIntervalMiles}
+                      onChangeText={setNewScheduleIntervalMiles}
+                      placeholder="e.g. 5000"
+                      keyboardType="numeric"
+                      placeholderTextColor="#94A3B8"
+                      style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
+                    />
+                  </View>
+                </View>
+
                 <TouchableOpacity
-                  onPress={() => { setNewScheduleType(""); setNewScheduleIntervalMiles(""); setTimeout(() => scheduleTypeInputRef.current?.focus(), 100); }}
-                  style={{ backgroundColor: "#F3F4F6", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: "#D1D5DB", flexDirection: "row", alignItems: "center", gap: 4 }}
+                  onPress={addSchedule}
+                  disabled={isSaving}
+                  style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 24, marginBottom: 20 }}
                 >
-                  <Ionicons name="pencil" size={13} color="#6B7280" />
-                  <Text style={{ color: "#6B7280", fontWeight: "600", fontSize: 13 }}>Custom...</Text>
+                  {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Reminder</Text>}
                 </TouchableOpacity>
-              </View>
-
-              <View style={{ gap: 14 }}>
-                <View>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Service Type</Text>
-                  <TextInput
-                    ref={scheduleTypeInputRef}
-                    value={newScheduleType}
-                    onChangeText={setNewScheduleType}
-                    placeholder="Select a preset or type your own..."
-                    placeholderTextColor="#94A3B8"
-                    style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
-                  />
-                </View>
-                <View>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Interval (km)</Text>
-                  <TextInput
-                    value={newScheduleIntervalMiles}
-                    onChangeText={setNewScheduleIntervalMiles}
-                    placeholder="e.g. 5000"
-                    keyboardType="numeric"
-                    placeholderTextColor="#94A3B8"
-                    style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: "#111827" }}
-                  />
-                </View>
-              </View>
-
-              <TouchableOpacity
-                onPress={addSchedule}
-                disabled={isSaving}
-                style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 24 }}
-              >
-                {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Reminder</Text>}
-              </TouchableOpacity>
+              </ScrollView>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
       {/* ── Log Service Modal ── */}
-      <Modal visible={showLogModal} transparent animationType="slide">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <Modal
+        visible={showLogModal}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        hardwareAccelerated
+        onRequestClose={() => setShowLogModal(false)}
+      >
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
-            <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 40 }}>
+            <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 20, maxHeight: "90%" }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
                 <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>Log Service</Text>
                 <TouchableOpacity onPress={() => setShowLogModal(false)} style={{ backgroundColor: "#F1F5F9", borderRadius: 50, padding: 8 }}>

@@ -177,6 +177,8 @@ export default function App() {
         transparent
         visible={!!carToDelete}
         animationType="fade"
+        statusBarTranslucent
+        hardwareAccelerated
         onRequestClose={() => setCarToDelete(null)}
       >
 
@@ -218,14 +220,16 @@ export default function App() {
         transparent
         visible={!!carToEdit}
         animationType="slide"
+        statusBarTranslucent
+        hardwareAccelerated
         onRequestClose={() => setCarToEdit(null)}
       >
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 40 }}>
+          <View style={{ backgroundColor: "#F8FAFC", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, paddingBottom: 20, maxHeight: "90%" }}>
 
             {/* Header */}
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <View>
                 <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827" }}>Edit Vehicle</Text>
                 <Text style={{ fontSize: 13, color: "#6B7280", marginTop: 2 }}>Update your car details below</Text>
@@ -238,182 +242,183 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* Image Preview + Picker */}
-            <TouchableOpacity onPress={pickEditImage} style={{ marginBottom: 20, borderRadius: 20, overflow: "hidden", height: 140, backgroundColor: "#000", position: "relative" }}>
-              <Image
-                source={{ uri: editImageUrl || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000" }}
-                style={{ width: "100%", height: "100%", opacity: 0.75 }}
-                resizeMode="cover"
-              />
-              <View style={{ position: "absolute", bottom: 12, right: 12, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 50, padding: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.4)" }}>
-                <Ionicons name="camera-outline" size={20} color="#fff" />
-              </View>
-              <View style={{ position: "absolute", bottom: 12, left: 12, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
-                <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>Tap to change photo</Text>
-              </View>
-            </TouchableOpacity>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* Image Preview + Picker */}
+              <TouchableOpacity onPress={pickEditImage} style={{ marginBottom: 20, borderRadius: 20, overflow: "hidden", height: 140, backgroundColor: "#000", position: "relative" }}>
+                <Image
+                  source={{ uri: editImageUrl || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1000" }}
+                  style={{ width: "100%", height: "100%", opacity: 0.75 }}
+                  resizeMode="cover"
+                />
+                <View style={{ position: "absolute", bottom: 12, right: 12, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 50, padding: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.4)" }}>
+                  <Ionicons name="camera-outline" size={20} color="#fff" />
+                </View>
+                <View style={{ position: "absolute", bottom: 12, left: 12, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>Tap to change photo</Text>
+                </View>
+              </TouchableOpacity>
 
-            {/* Input Fields */}
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 20 }} style={{ maxHeight: 420 }}>
-              {/* Row: Make + Model */}
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Make</Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <Ionicons name="business-outline" size={16} color="#94A3B8" />
-                    <TextInput
-                      value={editMake}
-                      onChangeText={setEditMake}
-                      placeholder="e.g. Toyota"
-                      placeholderTextColor="#94A3B8"
-                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
-                    />
+              {/* Input Fields */}
+              <View style={{ gap: 12, paddingBottom: 10 }}>
+                {/* Row: Make + Model */}
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Make</Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Ionicons name="business-outline" size={16} color="#94A3B8" />
+                      <TextInput
+                        value={editMake}
+                        onChangeText={setEditMake}
+                        placeholder="e.g. Toyota"
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                      />
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Model</Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Ionicons name="git-branch-outline" size={16} color="#94A3B8" />
+                      <TextInput
+                        value={editModel}
+                        onChangeText={setEditModel}
+                        placeholder="e.g. Supra"
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                      />
+                    </View>
                   </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Model</Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <Ionicons name="git-branch-outline" size={16} color="#94A3B8" />
-                    <TextInput
-                      value={editModel}
-                      onChangeText={setEditModel}
-                      placeholder="e.g. Supra"
-                      placeholderTextColor="#94A3B8"
-                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
-                    />
+
+                {/* Row: Year + Mileage */}
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Year</Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Ionicons name="calendar-outline" size={16} color="#94A3B8" />
+                      <TextInput
+                        value={editYear}
+                        onChangeText={setEditYear}
+                        placeholder="2024"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="numeric"
+                        style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                      />
+                    </View>
                   </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Odometer (km)</Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Ionicons name="speedometer-outline" size={16} color="#94A3B8" />
+                      <TextInput
+                        value={editMileage}
+                        onChangeText={setEditMileage}
+                        placeholder="0"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="numeric"
+                        style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Row: Nickname + VIN */}
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Nickname (Optional)</Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Ionicons name="pricetag-outline" size={16} color="#94A3B8" />
+                      <TextInput
+                        value={editNickname}
+                        onChangeText={setEditNickname}
+                        placeholder="e.g. Silver Bullet"
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                      />
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>VIN (Optional)</Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Ionicons name="barcode-outline" size={16} color="#94A3B8" />
+                      <TextInput
+                        value={editVin}
+                        onChangeText={setEditVin}
+                        placeholder="e.g. 1HGCM..."
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Row: Fuel Range + MPG */}
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Fuel Range (km) (Optional)</Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Ionicons name="water-outline" size={16} color="#94A3B8" />
+                      <TextInput
+                        value={editFuelRange}
+                        onChangeText={setEditFuelRange}
+                        placeholder="350"
+                        keyboardType="numeric"
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                      />
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Avg km/l (Optional)</Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Ionicons name="leaf-outline" size={16} color="#94A3B8" />
+                      <TextInput
+                        value={editAvgConsumption}
+                        onChangeText={setEditAvgConsumption}
+                        placeholder="24.5"
+                        keyboardType="numeric"
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Row: Tire Pressure */}
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Tire Pressure (Optional)</Text>
+                    <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
+                      <Ionicons name="disc-outline" size={16} color="#94A3B8" />
+                      <TextInput
+                        value={editTirePressure}
+                        onChangeText={setEditTirePressure}
+                        placeholder="32"
+                        keyboardType="numeric"
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
+                      />
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }} />
                 </View>
               </View>
 
-              {/* Row: Year + Mileage */}
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Year</Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <Ionicons name="calendar-outline" size={16} color="#94A3B8" />
-                    <TextInput
-                      value={editYear}
-                      onChangeText={setEditYear}
-                      placeholder="2024"
-                      placeholderTextColor="#94A3B8"
-                      keyboardType="numeric"
-                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
-                    />
-                  </View>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Odometer (km)</Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <Ionicons name="speedometer-outline" size={16} color="#94A3B8" />
-                    <TextInput
-                      value={editMileage}
-                      onChangeText={setEditMileage}
-                      placeholder="0"
-                      placeholderTextColor="#94A3B8"
-                      keyboardType="numeric"
-                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
-                    />
-                  </View>
-                </View>
-              </View>
-
-              {/* Row: Nickname + VIN */}
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Nickname (Optional)</Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <Ionicons name="pricetag-outline" size={16} color="#94A3B8" />
-                    <TextInput
-                      value={editNickname}
-                      onChangeText={setEditNickname}
-                      placeholder="e.g. Silver Bullet"
-                      placeholderTextColor="#94A3B8"
-                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
-                    />
-                  </View>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>VIN (Optional)</Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <Ionicons name="barcode-outline" size={16} color="#94A3B8" />
-                    <TextInput
-                      value={editVin}
-                      onChangeText={setEditVin}
-                      placeholder="e.g. 1HGCM..."
-                      placeholderTextColor="#94A3B8"
-                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
-                    />
-                  </View>
-                </View>
-              </View>
-
-              {/* Row: Fuel Range + MPG */}
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Fuel Range (km) (Optional)</Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <Ionicons name="water-outline" size={16} color="#94A3B8" />
-                    <TextInput
-                      value={editFuelRange}
-                      onChangeText={setEditFuelRange}
-                      placeholder="350"
-                      keyboardType="numeric"
-                      placeholderTextColor="#94A3B8"
-                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
-                    />
-                  </View>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Avg km/l (Optional)</Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <Ionicons name="leaf-outline" size={16} color="#94A3B8" />
-                    <TextInput
-                      value={editAvgConsumption}
-                      onChangeText={setEditAvgConsumption}
-                      placeholder="24.5"
-                      keyboardType="numeric"
-                      placeholderTextColor="#94A3B8"
-                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
-                    />
-                  </View>
-                </View>
-              </View>
-
-              {/* Row: Tire Pressure */}
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 6 }}>Tire Pressure (Optional)</Text>
-                  <View style={{ backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#E5E7EB", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    <Ionicons name="disc-outline" size={16} color="#94A3B8" />
-                    <TextInput
-                      value={editTirePressure}
-                      onChangeText={setEditTirePressure}
-                      placeholder="32"
-                      keyboardType="numeric"
-                      placeholderTextColor="#94A3B8"
-                      style={{ flex: 1, marginLeft: 8, color: "#111827", fontSize: 14 }}
-                    />
-                  </View>
-                </View>
-                <View style={{ flex: 1 }} />
-              </View>
-
+              {/* Save Button */}
+              <TouchableOpacity
+                onPress={updateCar}
+                disabled={isSaving}
+                style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 12, marginBottom: insets.bottom + 20, flexDirection: "row", justifyContent: "center", gap: 8 }}
+              >
+                {isSaving
+                  ? <ActivityIndicator color="#fff" />
+                  : <>
+                    <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                    <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Changes</Text>
+                  </>
+                }
+              </TouchableOpacity>
             </ScrollView>
-
-            {/* Save Button */}
-            <TouchableOpacity
-              onPress={updateCar}
-              disabled={isSaving}
-              style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 24, flexDirection: "row", justifyContent: "center", gap: 8 }}
-            >
-              {isSaving
-                ? <ActivityIndicator color="#fff" />
-                : <>
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Save Changes</Text>
-                </>
-              }
-            </TouchableOpacity>
 
           </View>
         </View>
@@ -513,6 +518,8 @@ export default function App() {
             transparent
             visible={!!selectedCarForMenu}
             animationType="slide"
+            statusBarTranslucent
+            hardwareAccelerated
             onRequestClose={() => setSelectedCarForMenu(null)}
           >
             <TouchableOpacity 
