@@ -36,6 +36,9 @@ export default function App() {
   const [showAddCar, setShowAddCar] = useState(false);
   const [selectedCarForMenu, setSelectedCarForMenu] = useState<any>(null);
 
+  const [totalMaintenanceCost, setTotalMaintenanceCost] = useState(0);
+  const [totalPetrolCost, setTotalPetrolCost] = useState(0);
+
   const getServiceStatus = (car: any) => {
     if (!car.service_schedules || car.service_schedules.length === 0) {
       return { label: "Active", bg: "#DCFCE7", text: "#166534" };
@@ -81,6 +84,23 @@ export default function App() {
         .order("created_at", { ascending: false });
       if (data) setCars(data);
       if (error) console.error("Error fetching cars:", error);
+
+      // Fetch overall stats
+      const { data: serviceLogs } = await supabase
+        .from("service_logs")
+        .select("cost");
+      if (serviceLogs) {
+        const totalM = serviceLogs.reduce((sum, item) => sum + parseFloat(item.cost || 0), 0);
+        setTotalMaintenanceCost(totalM);
+      }
+
+      const { data: petrolLogs } = await supabase
+        .from("petrol_logs")
+        .select("total_cost");
+      if (petrolLogs) {
+        const totalP = petrolLogs.reduce((sum, item) => sum + parseFloat(item.total_cost || 0), 0);
+        setTotalPetrolCost(totalP);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -511,6 +531,35 @@ export default function App() {
                 <Ionicons name="close-circle" size={18} color="#94A3B8" />
               </TouchableOpacity>
             )}
+          </View>
+
+          {/* Overall Stats Cards */}
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 20 }}>
+            {/* Maintenance Card */}
+            <View style={{ flex: 1, backgroundColor: "#EEF2F6", borderRadius: 20, padding: 14, borderWidth: 1, borderColor: "#E2E8F0", flexDirection: "row", alignItems: "center" }}>
+              <View style={{ backgroundColor: "#E2E8F0", padding: 8, borderRadius: 12, marginRight: 10 }}>
+                <Ionicons name="construct" size={18} color="#475569" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 9, fontWeight: "800", color: "#64748B", letterSpacing: 0.5 }}>TOTAL SERVICE</Text>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: "#1E293B", marginTop: 2 }} numberOfLines={1}>
+                  Rs. {totalMaintenanceCost.toLocaleString()}
+                </Text>
+              </View>
+            </View>
+
+            {/* Petrol Card */}
+            <View style={{ flex: 1, backgroundColor: "#ECFDF5", borderRadius: 20, padding: 14, borderWidth: 1, borderColor: "#D1FAE5", flexDirection: "row", alignItems: "center" }}>
+              <View style={{ backgroundColor: "#D1FAE5", padding: 8, borderRadius: 12, marginRight: 10 }}>
+                <Ionicons name="flame" size={18} color="#10B981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 9, fontWeight: "800", color: "#047857", letterSpacing: 0.5 }}>TOTAL PETROL</Text>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: "#065F46", marginTop: 2 }} numberOfLines={1}>
+                  Rs. {totalPetrolCost.toLocaleString()}
+                </Text>
+              </View>
+            </View>
           </View>
 
           {/* ── Car Action Menu Modal (Three Dots Menu) ── */}

@@ -15,12 +15,11 @@ import {
   Image,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -264,18 +263,15 @@ export default function CarDetailScreen() {
 
       const { data: petrolData } = await supabase.from("petrol_logs").select("*").eq("car_id", id).order("date", { ascending: false });
       if (petrolData) setPetrolLogs(petrolData);
-
       if (carData && scheduleData) {
         await checkServiceReminders(carData, scheduleData);
       }
-
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
-
   const updateCarMileage = async (newMileage: number) => {
     try {
       const token = await getToken({ template: "supabase" });
