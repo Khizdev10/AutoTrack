@@ -1,4 +1,6 @@
 import { createClerkSupabaseClient } from "@/app/lib/supabase";
+import { getPreferences, formatCurrency, convertAndFormatDistance, convertAndFormatVolume } from "@/app/lib/settings";
+import { useIsFocused } from "@react-navigation/native";
 import Header from "@/components/Header";
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -67,6 +69,12 @@ export default function CarDetailScreen() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Preference states
+  const [prefCurrency, setPrefCurrency] = useState("Rs.");
+  const [prefDistanceUnit, setPrefDistanceUnit] = useState("km");
+  const [prefVolumeUnit, setPrefVolumeUnit] = useState("L");
+  const isFocused = useIsFocused();
 
   // Modals
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -257,8 +265,17 @@ export default function CarDetailScreen() {
   }, []);
 
   useEffect(() => {
-    fetchCarDetails();
-  }, [id]);
+    const loadSettings = async () => {
+      const prefs = await getPreferences();
+      setPrefCurrency(prefs.currency);
+      setPrefDistanceUnit(prefs.distanceUnit);
+      setPrefVolumeUnit(prefs.volumeUnit);
+    };
+    if (isFocused) {
+      loadSettings();
+      fetchCarDetails();
+    }
+  }, [id, isFocused]);
 
 
   useEffect(() => {
@@ -786,7 +803,7 @@ export default function CarDetailScreen() {
             </View>
             <View>
               <Text style={{ fontSize: 10, fontWeight: "800", color: "#64748B", letterSpacing: 0.5, marginBottom: 4 }}>TOTAL MAINTENANCE SPEND</Text>
-              <Text style={{ fontSize: 20, fontWeight: "800", color: "#1E293B" }}>Rs. {totalSpent.toLocaleString()}</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#1E293B" }}>{formatCurrency(totalSpent, prefCurrency)}</Text>
             </View>
           </View>
           <View style={{ backgroundColor: "#F5F5F5", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
@@ -802,7 +819,7 @@ export default function CarDetailScreen() {
             </View>
             <View>
               <Text style={{ fontSize: 10, fontWeight: "800", color: "#64748B", letterSpacing: 0.5, marginBottom: 4 }}>TOTAL PETROL SPEND</Text>
-              <Text style={{ fontSize: 20, fontWeight: "800", color: "#1E293B" }}>Rs. {totalPetrolSpent.toLocaleString()}</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#1E293B" }}>{formatCurrency(totalPetrolSpent, prefCurrency)}</Text>
             </View>
           </View>
           <View style={{ backgroundColor: "#F5F5F5", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
@@ -840,7 +857,7 @@ export default function CarDetailScreen() {
                     <View key={item.key} style={{ gap: 6 }}>
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                         <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{item.label}</Text>
-                        <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>Rs. {item.total.toLocaleString()}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>{formatCurrency(item.total, prefCurrency)}</Text>
                       </View>
                       <View style={{ height: 6, backgroundColor: "#F1F5F9", borderRadius: 3, overflow: "hidden", flexDirection: "row" }}>
                         {item.service > 0 && (
@@ -854,13 +871,13 @@ export default function CarDetailScreen() {
                         {item.service > 0 && (
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706" }} />
-                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: Rs. {item.service.toLocaleString()}</Text>
+                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: {formatCurrency(item.service, prefCurrency)}</Text>
                           </View>
                         )}
                         {item.petrol > 0 && (
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16A34A" }} />
-                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: Rs. {item.petrol.toLocaleString()}</Text>
+                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: {formatCurrency(item.petrol, prefCurrency)}</Text>
                           </View>
                         )}
                       </View>
@@ -879,7 +896,7 @@ export default function CarDetailScreen() {
                     <View key={item.year} style={{ gap: 6 }}>
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                         <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{item.label}</Text>
-                        <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>Rs. {item.total.toLocaleString()}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>{formatCurrency(item.total, prefCurrency)}</Text>
                       </View>
                       <View style={{ height: 6, backgroundColor: "#F1F5F9", borderRadius: 3, overflow: "hidden", flexDirection: "row" }}>
                         {item.service > 0 && (
@@ -893,13 +910,13 @@ export default function CarDetailScreen() {
                         {item.service > 0 && (
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706" }} />
-                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: Rs. {item.service.toLocaleString()}</Text>
+                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: {formatCurrency(item.service, prefCurrency)}</Text>
                           </View>
                         )}
                         {item.petrol > 0 && (
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16A34A" }} />
-                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: Rs. {item.petrol.toLocaleString()}</Text>
+                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: {formatCurrency(item.petrol, prefCurrency)}</Text>
                           </View>
                         )}
                       </View>
@@ -910,8 +927,6 @@ export default function CarDetailScreen() {
             )
           )}
         </View>
-
-
 
         {/* MAINTENANCE CARD */}
         <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 24, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 }}>
@@ -938,7 +953,7 @@ export default function CarDetailScreen() {
                 <Ionicons name="calendar-outline" size={24} color="#64748B" />
                 <View>
                   <Text style={{ fontSize: 15, fontWeight: "700", color: "#1E293B" }}>
-                    {mostUrgentSchedule.service_type} in {Math.max(0, lowestMilesRemaining).toLocaleString()} km
+                    {mostUrgentSchedule.service_type} in {convertAndFormatDistance(Math.max(0, lowestMilesRemaining), prefDistanceUnit)}
                   </Text>
                   {lowestMilesRemaining < 0 && (
                     <Text style={{ fontSize: 12, fontWeight: "700", color: "#EF4444", marginTop: 2 }}>Currently OVERDUE!</Text>
@@ -972,7 +987,7 @@ export default function CarDetailScreen() {
                 <View key={schedule.id} style={{ backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View>
                     <Text style={{ fontWeight: "700", color: "#1E293B", fontSize: 15 }}>{schedule.service_type}</Text>
-                    <Text style={{ color: "#64748B", fontSize: 12, marginTop: 2 }}>{remaining > 0 ? `in ${remaining.toLocaleString()} km` : 'Overdue'}</Text>
+                    <Text style={{ color: "#64748B", fontSize: 12, marginTop: 2 }}>{remaining > 0 ? `in ${convertAndFormatDistance(remaining, prefDistanceUnit)}` : 'Overdue'}</Text>
                   </View>
                   <TouchableOpacity onPress={() => openLogModal(schedule.service_type)} style={{ backgroundColor: "#F1F5F9", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
                     <Text style={{ color: "#3B82F6", fontSize: 11, fontWeight: "800" }}>LOG</Text>
@@ -1000,10 +1015,10 @@ export default function CarDetailScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 15, fontWeight: "700", color: "#1E293B" }}>{log.service_type}</Text>
-                    <Text style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>{log.mileage_at_service?.toLocaleString()} km {log.notes ? `• ${log.notes}` : ''}</Text>
+                    <Text style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>{convertAndFormatDistance(log.mileage_at_service, prefDistanceUnit)} {log.notes ? `• ${log.notes}` : ''}</Text>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{log.cost ? `-Rs. ${log.cost.toLocaleString()}` : '--'}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{log.cost ? `-${formatCurrency(log.cost, prefCurrency)}` : '--'}</Text>
                     <Text style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{new Date(log.date_performed).toLocaleDateString()}</Text>
                   </View>
                   <TouchableOpacity
@@ -1047,13 +1062,13 @@ export default function CarDetailScreen() {
                     <Ionicons name="flame" size={20} color="#16A34A" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "700", color: "#1E293B" }}>{log.liters} L @ Rs. {log.price_per_liter}/L</Text>
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: "#1E293B" }}>{convertAndFormatVolume(log.liters, prefVolumeUnit)} @ {formatCurrency(log.price_per_liter, prefCurrency)}/{prefVolumeUnit}</Text>
                     <Text style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
-                      {log.mileage_at_fillup?.toLocaleString()} km{log.notes ? ` • ${log.notes}` : ''}
+                      {convertAndFormatDistance(log.mileage_at_fillup, prefDistanceUnit)}{log.notes ? ` • ${log.notes}` : ''}
                     </Text>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>-Rs. {log.total_cost?.toLocaleString()}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>-{formatCurrency(log.total_cost, prefCurrency)}</Text>
                     <Text style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{new Date(log.date).toLocaleDateString()}</Text>
 
                   </View>
@@ -1127,7 +1142,7 @@ export default function CarDetailScreen() {
         >
           <TouchableOpacity activeOpacity={1} style={{ backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 36 }}>
             <Text style={{ fontSize: 13, fontWeight: "700", color: "#94A3B8", textAlign: "center", marginBottom: 20 }}>
-              {selectedPetrolLog ? `${selectedPetrolLog.liters}L fill-up` : ""}
+              {selectedPetrolLog ? `${convertAndFormatVolume(selectedPetrolLog.liters, prefVolumeUnit)} fill-up` : ""}
             </Text>
             <TouchableOpacity
               onPress={() => openEditPetrolLog(selectedPetrolLog)}
@@ -1178,7 +1193,7 @@ export default function CarDetailScreen() {
                 <View style={{ gap: 16 }}>
                   <View style={{ flexDirection: "row", gap: 12 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Liters</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Volume ({prefVolumeUnit})</Text>
                       <TextInput
                         value={newPetrolLiters}
                         onChangeText={setNewPetrolLiters}
@@ -1189,7 +1204,7 @@ export default function CarDetailScreen() {
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Price per Liter (Rs.)</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Price per unit ({prefCurrency})</Text>
                       <TextInput
                         value={newPetrolPricePerLiter}
                         onChangeText={setNewPetrolPricePerLiter}
@@ -1201,7 +1216,7 @@ export default function CarDetailScreen() {
                     </View>
                   </View>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Odometer at Fill-up (km)</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Odometer at Fill-up ({prefDistanceUnit})</Text>
                     <TextInput
                       value={newPetrolMileage}
                       onChangeText={setNewPetrolMileage}
@@ -1249,7 +1264,7 @@ export default function CarDetailScreen() {
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 24 }}>
             <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 28, width: "100%", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}>
               <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827", textAlign: "center", marginBottom: 8 }}>Update Odometer</Text>
-              <Text style={{ fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24 }}>Enter your current odometer reading (km).</Text>
+              <Text style={{ fontSize: 14, color: "#6B7280", textAlign: "center", marginBottom: 24 }}>Enter your current odometer reading ({prefDistanceUnit}).</Text>
               <TextInput
                 value={manualMileage}
                 onChangeText={setManualMileage}
@@ -1294,7 +1309,7 @@ export default function CarDetailScreen() {
                   {PRESET_SCHEDULES.map((preset) => (
                     <TouchableOpacity
                       key={preset.label}
-                      onPress={() => { setNewScheduleType(preset.label); setNewScheduleIntervalMiles(preset.interval); }}
+                      onPress={() => { setNewScheduleType(preset.label); setNewScheduleIntervalMiles(preset.interval.toString()); }}
                       style={{
                         backgroundColor: newScheduleType === preset.label ? "#2563EB" : "#EFF6FF",
                         paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
@@ -1326,7 +1341,7 @@ export default function CarDetailScreen() {
                     />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Interval (km)</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Interval ({prefDistanceUnit})</Text>
                     <TextInput
                       value={newScheduleIntervalMiles}
                       onChangeText={setNewScheduleIntervalMiles}
@@ -1384,7 +1399,7 @@ export default function CarDetailScreen() {
                   </View>
                   <View style={{ flexDirection: "row", gap: 12 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Odometer (km)</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Odometer ({prefDistanceUnit})</Text>
                       <TextInput
                         value={newLogMileage}
                         onChangeText={setNewLogMileage}
@@ -1395,7 +1410,7 @@ export default function CarDetailScreen() {
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Cost (Rs.) - Optional</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 8 }}>Cost ({prefCurrency}) - Optional</Text>
                       <TextInput
                         value={newLogCost}
                         onChangeText={setNewLogCost}

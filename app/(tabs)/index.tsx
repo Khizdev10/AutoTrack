@@ -1,4 +1,6 @@
 import { createClerkSupabaseClient } from "@/app/lib/supabase";
+import { getPreferences, formatCurrency } from "@/app/lib/settings";
+import { useIsFocused } from "@react-navigation/native";
 import AddCar from "@/components/AddCar";
 import Header from "@/components/Header";
 import "@/global.css";
@@ -47,6 +49,8 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all'); // 0-indexed (0 = Jan)
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [prefCurrency, setPrefCurrency] = useState("Rs.");
+  const isFocused = useIsFocused();
 
   const getUniqueYears = () => {
     const yearsSet = new Set<number>();
@@ -309,8 +313,15 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchCarData();
-  }, []);
+    const loadSettings = async () => {
+      const prefs = await getPreferences();
+      setPrefCurrency(prefs.currency);
+    };
+    if (isFocused) {
+      loadSettings();
+      fetchCarData();
+    }
+  }, [isFocused]);
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8FAFC]">
@@ -698,7 +709,7 @@ export default function App() {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 9, fontWeight: "800", color: "#64748B", letterSpacing: 0.5 }}>TOTAL SERVICE</Text>
                 <Text style={{ fontSize: 13, fontWeight: "800", color: "#1E293B", marginTop: 2 }} numberOfLines={1}>
-                  Rs. {totalMaintenanceCost.toLocaleString()}
+                  {formatCurrency(totalMaintenanceCost, prefCurrency)}
                 </Text>
               </View>
             </View>
@@ -711,7 +722,7 @@ export default function App() {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 9, fontWeight: "800", color: "#047857", letterSpacing: 0.5 }}>TOTAL PETROL</Text>
                 <Text style={{ fontSize: 13, fontWeight: "800", color: "#065F46", marginTop: 2 }} numberOfLines={1}>
-                  Rs. {totalPetrolCost.toLocaleString()}
+                  {formatCurrency(totalPetrolCost, prefCurrency)}
                 </Text>
               </View>
             </View>
@@ -808,7 +819,7 @@ export default function App() {
                       <View key={item.key} style={{ gap: 6 }}>
                         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                           <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{item.label}</Text>
-                          <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>Rs. {item.total.toLocaleString()}</Text>
+                          <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>{formatCurrency(item.total, prefCurrency)}</Text>
                         </View>
                         <View style={{ height: 6, backgroundColor: "#F1F5F9", borderRadius: 3, overflow: "hidden", flexDirection: "row" }}>
                           {item.service > 0 && (
@@ -822,13 +833,13 @@ export default function App() {
                           {item.service > 0 && (
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706" }} />
-                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: Rs. {item.service.toLocaleString()}</Text>
+                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: {formatCurrency(item.service, prefCurrency)}</Text>
                             </View>
                           )}
                           {item.petrol > 0 && (
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16A34A" }} />
-                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: Rs. {item.petrol.toLocaleString()}</Text>
+                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: {formatCurrency(item.petrol, prefCurrency)}</Text>
                             </View>
                           )}
                         </View>
@@ -847,7 +858,7 @@ export default function App() {
                       <View key={item.year} style={{ gap: 6 }}>
                         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                           <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{item.label}</Text>
-                          <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>Rs. {item.total.toLocaleString()}</Text>
+                          <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>{formatCurrency(item.total, prefCurrency)}</Text>
                         </View>
                         <View style={{ height: 6, backgroundColor: "#F1F5F9", borderRadius: 3, overflow: "hidden", flexDirection: "row" }}>
                           {item.service > 0 && (
@@ -861,13 +872,13 @@ export default function App() {
                           {item.service > 0 && (
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706" }} />
-                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: Rs. {item.service.toLocaleString()}</Text>
+                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: {formatCurrency(item.service, prefCurrency)}</Text>
                             </View>
                           )}
                           {item.petrol > 0 && (
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16A34A" }} />
-                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: Rs. {item.petrol.toLocaleString()}</Text>
+                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: {formatCurrency(item.petrol, prefCurrency)}</Text>
                             </View>
                           )}
                         </View>
