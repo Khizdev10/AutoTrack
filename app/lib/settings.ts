@@ -4,6 +4,7 @@ export interface AppPreferences {
   currency: string;
   distanceUnit: string; // 'km' | 'mi'
   volumeUnit: string; // 'L' | 'gal'
+  theme: string; // 'light' | 'dark'
 }
 
 export const getPreferences = async (): Promise<AppPreferences> => {
@@ -11,9 +12,10 @@ export const getPreferences = async (): Promise<AppPreferences> => {
     const currency = await AsyncStorage.getItem("autotrack_currency") || "Rs.";
     const distanceUnit = await AsyncStorage.getItem("autotrack_distance_unit") || "km";
     const volumeUnit = await AsyncStorage.getItem("autotrack_volume_unit") || "L";
-    return { currency, distanceUnit, volumeUnit };
+    const theme = await AsyncStorage.getItem("autotrack_theme") || "light";
+    return { currency, distanceUnit, volumeUnit, theme };
   } catch (e) {
-    return { currency: "Rs.", distanceUnit: "km", volumeUnit: "L" };
+    return { currency: "Rs.", distanceUnit: "km", volumeUnit: "L", theme: "light" };
   }
 };
 

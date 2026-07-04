@@ -4,13 +4,21 @@ import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tabs } from '../constants/data';
+import { useTheme } from '../context/ThemeContext';
+
+interface TabIconProps {
+    focused: boolean;
+    icon: any;
+}
 
 const TabLayout = () => {
     const { isSignedIn, isLoaded } = useAuth();
     const insets = useSafeAreaInsets();
+    const { colors } = useTheme();
 
     if (!isLoaded) return null;
     if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
+
     const TabIcon = ({ focused, icon }: TabIconProps) => {
         return (
             <Image
@@ -18,11 +26,12 @@ const TabLayout = () => {
                 style={{
                     width: 24,
                     height: 24,
-                    tintColor: focused ? '#4976fbff' : '#999',
+                    tintColor: focused ? colors.primary : colors.textMuted,
                 }}
             />
-        )
-    }
+        );
+    };
+
     return (
         <Tabs screenOptions={{
             headerShown: false,
@@ -35,27 +44,24 @@ const TabLayout = () => {
                 width: '100%',
                 right: 0,
                 height: 60,
-                backgroundColor: '#ffffffff',
+                backgroundColor: colors.card,
                 borderRadius: 0,
                 bottom: Math.max(insets.bottom, 0),
                 marginHorizontal: 0,
                 borderWidth: 1,
-                borderColor: '#e5e7eb',
+                borderColor: colors.border,
             }
-        }}
-
-        >
+        }}>
             {tabs.map((tab) => (
                 <Tabs.Screen key={tab.id} name={tab.name} options={{
                     title: tab.title,
                     tabBarIcon: ({ focused }) => (
                         <TabIcon focused={focused} icon={tab.icon} />
                     ),
-
                 }} />
             ))}
         </Tabs>
-    )
-}
+    );
+};
 
-export default TabLayout
+export default TabLayout;

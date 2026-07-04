@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "@/app/context/ThemeContext";
 
 const SafeAreaView = styled(RNSafeAreaView);
 const { width: screenWidth } = Dimensions.get("window");
@@ -62,6 +63,7 @@ export default function InsightsScreen() {
   const { getToken } = useAuth();
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
+  const { theme, colors } = useTheme();
 
   const [cars, setCars] = useState<Car[]>([]);
   const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>([]);
@@ -325,13 +327,13 @@ export default function InsightsScreen() {
   }, [activeBarIndex, stats.individualPoints]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F8FAFC" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       {/* ── HEADER ── */}
       <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 }}>
-        <Text style={{ fontSize: 11, fontWeight: "900", color: "#2563EB", letterSpacing: 1.5, textTransform: "uppercase" }}>
+        <Text style={{ fontSize: 11, fontWeight: "900", color: colors.primary, letterSpacing: 1.5, textTransform: "uppercase" }}>
           Metrics & Trends
         </Text>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: "#0F172A", marginTop: 4 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: colors.text, marginTop: 4 }}>
           Insights & Analytics
         </Text>
       </View>
@@ -350,9 +352,9 @@ export default function InsightsScreen() {
               paddingHorizontal: 18,
               paddingVertical: 12,
               borderRadius: 18,
-              backgroundColor: selectedCarId === "all" ? "#1E293B" : "#fff",
+              backgroundColor: selectedCarId === "all" ? (theme === "dark" ? "#3B82F6" : "#1E293B") : colors.card,
               borderWidth: 1,
-              borderColor: selectedCarId === "all" ? "#1E293B" : "#E2E8F0",
+              borderColor: selectedCarId === "all" ? (theme === "dark" ? "#3B82F6" : "#1E293B") : colors.border,
               flexDirection: "row",
               alignItems: "center",
               gap: 8,
@@ -362,8 +364,8 @@ export default function InsightsScreen() {
               elevation: selectedCarId === "all" ? 2 : 0,
             }}
           >
-            <Ionicons name="grid-outline" size={16} color={selectedCarId === "all" ? "#fff" : "#64748B"} />
-            <Text style={{ fontSize: 13, fontWeight: "700", color: selectedCarId === "all" ? "#fff" : "#1E293B" }}>
+            <Ionicons name="grid-outline" size={16} color={selectedCarId === "all" ? "#fff" : colors.textMuted} />
+            <Text style={{ fontSize: 13, fontWeight: "700", color: selectedCarId === "all" ? "#fff" : colors.text }}>
               All Vehicles
             </Text>
           </TouchableOpacity>
@@ -379,16 +381,16 @@ export default function InsightsScreen() {
                   paddingHorizontal: 18,
                   paddingVertical: 12,
                   borderRadius: 18,
-                  backgroundColor: isSelected ? "#1E293B" : "#fff",
+                  backgroundColor: isSelected ? (theme === "dark" ? "#3B82F6" : "#1E293B") : colors.card,
                   borderWidth: 1,
-                  borderColor: isSelected ? "#1E293B" : "#E2E8F0",
+                  borderColor: isSelected ? (theme === "dark" ? "#3B82F6" : "#1E293B") : colors.border,
                   shadowColor: "#000",
                   shadowOpacity: isSelected ? 0.08 : 0,
                   shadowRadius: 5,
                   elevation: isSelected ? 2 : 0,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: "700", color: isSelected ? "#fff" : "#1E293B" }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: isSelected ? "#fff" : colors.text }}>
                   {car.nickname || `${car.vehicleMake} ${car.modelName}`}
                 </Text>
               </TouchableOpacity>
@@ -400,20 +402,20 @@ export default function InsightsScreen() {
       {/* ── MAIN CONTENT ── */}
       {isLoading ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
         >
           {/* ── CARD 1: COST PER KILOMETER ── */}
           <LinearGradient
-            colors={["#1E3A8A", "#0D9488"]}
+            colors={theme === "dark" ? ["#1E293B", "#0F172A"] : ["#1E3A8A", "#0D9488"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={{ borderRadius: 28, padding: 24, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 15, elevation: 5 }}
+            style={{ borderRadius: 28, padding: 24, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 15, elevation: 5, borderWidth: theme === "dark" ? 1 : 0, borderColor: colors.border }}
           >
             <Text style={{ color: "#E0F2FE", fontSize: 10, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase" }}>
               Operational Efficiency
@@ -427,20 +429,20 @@ export default function InsightsScreen() {
           </LinearGradient>
 
           {/* ── CARD 2: FINANCIAL SPENDING RATIO ── */}
-          <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1, borderWidth: 1, borderColor: "#F1F5F9" }}>
-            <Text style={{ fontSize: 15, fontWeight: "800", color: "#1E293B", marginBottom: 16 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.text, marginBottom: 16 }}>
               Spending Distribution
             </Text>
 
             {/* Split Bar */}
-            <View style={{ height: 16, backgroundColor: "#F1F5F9", borderRadius: 999, overflow: "hidden", flexDirection: "row", marginBottom: 20 }}>
+            <View style={{ height: 16, backgroundColor: colors.accent, borderRadius: 999, overflow: "hidden", flexDirection: "row", marginBottom: 20 }}>
               {stats.grandTotal > 0 ? (
                 <>
                   <View style={{ width: `${(stats.totalMaintenance / stats.grandTotal) * 100}%`, backgroundColor: "#D97706" }} />
                   <View style={{ width: `${(stats.totalPetrol / stats.grandTotal) * 100}%`, backgroundColor: "#10B981" }} />
                 </>
               ) : (
-                <View style={{ flex: 1, backgroundColor: "#E2E8F0" }} />
+                <View style={{ flex: 1, backgroundColor: colors.border }} />
               )}
             </View>
 
@@ -449,25 +451,25 @@ export default function InsightsScreen() {
               <View>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: "#D97706" }} />
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#64748B" }}>MAINTENANCE</Text>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted }}>MAINTENANCE</Text>
                 </View>
-                <Text style={{ fontSize: 15, fontWeight: "800", color: "#1E293B", marginTop: 4 }}>
+                <Text style={{ fontSize: 15, fontWeight: "800", color: colors.text, marginTop: 4 }}>
                   {formatCurrency(stats.totalMaintenance, prefCurrency)}
                 </Text>
-                <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600", marginTop: 2 }}>
+                <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: "600", marginTop: 2 }}>
                   {stats.grandTotal > 0 ? ((stats.totalMaintenance / stats.grandTotal) * 100).toFixed(0) : 0}% of total
                 </Text>
               </View>
 
               <View style={{ alignItems: "flex-end" }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#64748B" }}>PETROL</Text>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted }}>PETROL</Text>
                   <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: "#10B981" }} />
                 </View>
-                <Text style={{ fontSize: 15, fontWeight: "800", color: "#1E293B", marginTop: 4 }}>
+                <Text style={{ fontSize: 15, fontWeight: "800", color: colors.text, marginTop: 4 }}>
                   {formatCurrency(stats.totalPetrol, prefCurrency)}
                 </Text>
-                <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600", marginTop: 2 }}>
+                <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: "600", marginTop: 2 }}>
                   {stats.grandTotal > 0 ? ((stats.totalPetrol / stats.grandTotal) * 100).toFixed(0) : 0}% of total
                 </Text>
               </View>
@@ -475,16 +477,16 @@ export default function InsightsScreen() {
           </View>
 
           {/* ── CARD 3: FUEL ECONOMY ANALYTICS ── */}
-          <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1, borderWidth: 1, borderColor: "#F1F5F9" }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1, borderWidth: 1, borderColor: colors.border }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <View>
-                <Text style={{ fontSize: 15, fontWeight: "800", color: "#1E293B" }}>Fuel Efficiency Trends</Text>
-                <Text style={{ fontSize: 11, color: "#64748B", fontWeight: "500", marginTop: 2 }}>
+                <Text style={{ fontSize: 15, fontWeight: "800", color: colors.text }}>Fuel Efficiency Trends</Text>
+                <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "500", marginTop: 2 }}>
                   {selectedCarId === "all" ? "Average across all logs" : "Fill-up history"}
                 </Text>
               </View>
-              <View style={{ backgroundColor: "#ECFDF5", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}>
-                <Text style={{ fontSize: 14, fontWeight: "800", color: "#065F46" }}>
+              <View style={{ backgroundColor: colors.greenBg, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}>
+                <Text style={{ fontSize: 14, fontWeight: "800", color: colors.greenText }}>
                   {stats.averageKmL > 0 ? formatFuelEconomy(stats.averageKmL) : "--"}
                 </Text>
               </View>
@@ -498,17 +500,17 @@ export default function InsightsScreen() {
                   {carFuelComparison.map((item) => (
                     <View key={item.name}>
                       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-                        <Text style={{ fontSize: 12, fontWeight: "700", color: "#334155" }} numberOfLines={1}>{item.name}</Text>
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text }} numberOfLines={1}>{item.name}</Text>
                         <Text style={{ fontSize: 12, fontWeight: "800", color: "#10B981" }}>{formatFuelEconomy(item.kmL)}</Text>
                       </View>
-                      <View style={{ height: 8, backgroundColor: "#F1F5F9", borderRadius: 999, overflow: "hidden" }}>
+                      <View style={{ height: 8, backgroundColor: colors.accent, borderRadius: 999, overflow: "hidden" }}>
                         <View style={{ width: `${Math.min(100, (item.kmL / 25) * 100)}%`, backgroundColor: "#10B981", height: "100%", borderRadius: 999 }} />
                       </View>
                     </View>
                   ))}
                 </View>
               ) : (
-                <Text style={{ textAlign: "center", color: "#64748B", fontSize: 13, paddingVertical: 20 }}>
+                <Text style={{ textAlign: "center", color: colors.textMuted, fontSize: 13, paddingVertical: 20 }}>
                   Log petrol with odometer readings on multiple fill-ups to see fuel comparisons.
                 </Text>
               )
@@ -518,18 +520,18 @@ export default function InsightsScreen() {
                 <View>
                   {/* Tooltip Overlay */}
                   {selectedBarDetail && (
-                    <View style={{ backgroundColor: "#F8FAFC", borderRadius: 14, padding: 12, borderLeftWidth: 4, borderLeftColor: "#10B981", marginBottom: 16 }}>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#64748B" }}>
+                    <View style={{ backgroundColor: colors.accent, borderRadius: 14, padding: 12, borderLeftWidth: 4, borderLeftColor: "#10B981", marginBottom: 16 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textMuted }}>
                         {new Date(selectedBarDetail.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                       </Text>
                       <View style={{ flexDirection: "row", gap: 12, marginTop: 6 }}>
-                        <Text style={{ fontSize: 12, color: "#1E293B" }}>
+                        <Text style={{ fontSize: 12, color: colors.text }}>
                           <Text style={{ fontWeight: "700" }}>{formatFuelEconomy(selectedBarDetail.kmL)}</Text>
                         </Text>
-                        <Text style={{ fontSize: 12, color: "#1E293B" }}>
+                        <Text style={{ fontSize: 12, color: colors.text }}>
                           <Text style={{ fontWeight: "700" }}>{convertAndFormatVolume(selectedBarDetail.liters, prefVolumeUnit)}</Text>
                         </Text>
-                        <Text style={{ fontSize: 12, color: "#1E293B" }}>
+                        <Text style={{ fontSize: 12, color: colors.text }}>
                           <Text style={{ fontWeight: "700" }}>{formatCurrency(selectedBarDetail.cost, prefCurrency)}</Text>
                         </Text>
                       </View>
@@ -545,10 +547,10 @@ export default function InsightsScreen() {
 
                       return (
                         <TouchableOpacity
-                          key={idx}
-                          onPress={() => setActiveBarIndex(isSelected ? null : idx)}
-                          activeOpacity={0.8}
-                          style={{ alignItems: "center" }}
+                           key={idx}
+                           onPress={() => setActiveBarIndex(isSelected ? null : idx)}
+                           activeOpacity={0.8}
+                           style={{ alignItems: "center" }}
                         >
                           <View
                             style={{
@@ -561,26 +563,26 @@ export default function InsightsScreen() {
                               style={{
                                 height: `${heightPercent}%`,
                                 width: "100%",
-                                backgroundColor: isSelected ? "#059669" : "#10B981",
+                                backgroundColor: isSelected ? (theme === "dark" ? "#3B82F6" : "#059669") : "#10B981",
                                 borderTopLeftRadius: 6,
                                 borderTopRightRadius: 6,
                                 opacity: isSelected ? 1 : 0.85,
                               }}
                             />
                           </View>
-                          <Text style={{ fontSize: 8, fontWeight: "700", color: "#64748B", marginTop: 6 }}>
+                          <Text style={{ fontSize: 8, fontWeight: "700", color: colors.textMuted, marginTop: 6 }}>
                             {new Date(pt.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                           </Text>
                         </TouchableOpacity>
                       );
                     })}
                   </ScrollView>
-                  <Text style={{ fontSize: 10, color: "#64748B", textAlign: "center", fontStyle: "italic", marginTop: 8 }}>
+                  <Text style={{ fontSize: 10, color: colors.textMuted, textAlign: "center", fontStyle: "italic", marginTop: 8 }}>
                     *Tap on any bar to see specific liters & total cost details.
                   </Text>
                 </View>
               ) : (
-                <Text style={{ textAlign: "center", color: "#64748B", fontSize: 13, paddingVertical: 20 }}>
+                <Text style={{ textAlign: "center", color: colors.textMuted, fontSize: 13, paddingVertical: 20 }}>
                   Requires at least two fill-ups to calculate km/l fuel economy logs.
                 </Text>
               )
@@ -588,8 +590,8 @@ export default function InsightsScreen() {
           </View>
 
           {/* ── CARD 4: SERVICE CATEGORY COST BREAKDOWN ── */}
-          <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1, borderWidth: 1, borderColor: "#F1F5F9" }}>
-            <Text style={{ fontSize: 15, fontWeight: "800", color: "#1E293B", marginBottom: 16 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.text, marginBottom: 16 }}>
               Maintenance Categories
             </Text>
 
@@ -598,30 +600,30 @@ export default function InsightsScreen() {
                 {stats.categoryList.map((cat) => (
                   <View key={cat.name}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: "#334155" }}>{cat.name}</Text>
-                      <Text style={{ fontSize: 13, fontWeight: "800", color: "#1E293B" }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text }}>{cat.name}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "800", color: colors.text }}>
                         {formatCurrency(cat.cost, prefCurrency)}
                       </Text>
                     </View>
-                    <View style={{ height: 6, backgroundColor: "#F1F5F9", borderRadius: 999, overflow: "hidden" }}>
+                    <View style={{ height: 6, backgroundColor: colors.accent, borderRadius: 999, overflow: "hidden" }}>
                       <View style={{ width: `${cat.percentage}%`, backgroundColor: "#D97706", height: "100%", borderRadius: 999 }} />
                     </View>
                   </View>
                 ))}
               </View>
             ) : (
-              <Text style={{ textAlign: "center", color: "#64748B", fontSize: 13, paddingVertical: 12 }}>
+              <Text style={{ textAlign: "center", color: colors.textMuted, fontSize: 13, paddingVertical: 12 }}>
                 No maintenance logs categorized yet.
               </Text>
             )}
           </View>
 
           {/* ── CARD 5: PREDICTIVE SERVICE FORECASTER ── */}
-          <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1, borderWidth: 1, borderColor: "#F1F5F9" }}>
-            <Text style={{ fontSize: 15, fontWeight: "800", color: "#1E293B", marginBottom: 4 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.text, marginBottom: 4 }}>
               Predictive Service Forecast
             </Text>
-            <Text style={{ fontSize: 11, color: "#64748B", fontWeight: "500", marginBottom: 16 }}>
+            <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "500", marginBottom: 16 }}>
               Estimated calendar milestones based on weekly driving averages
             </Text>
 
@@ -637,18 +639,18 @@ export default function InsightsScreen() {
                       style={{
                         padding: 14,
                         borderRadius: 16,
-                        backgroundColor: isOverdue ? "#FEF2F2" : isSoon ? "#FFFBEB" : "#F8FAFC",
+                        backgroundColor: isOverdue ? (theme === "dark" ? "#441D1D" : "#FEF2F2") : isSoon ? (theme === "dark" ? "#452E1D" : "#FFFBEB") : colors.accent,
                         borderWidth: 1,
-                        borderColor: isOverdue ? "#FEE2E2" : isSoon ? "#FEF3C7" : "#E2E8F0",
+                        borderColor: isOverdue ? "#EF4444" : isSoon ? "#D97706" : colors.border,
                       }}
                     >
                       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>
+                          <Text style={{ fontSize: 14, fontWeight: "800", color: colors.text }}>
                             {forecast.service_type}
                           </Text>
                           {selectedCarId === "all" && (
-                            <Text style={{ fontSize: 11, color: "#64748B", fontWeight: "600", marginTop: 2 }}>
+                            <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600", marginTop: 2 }}>
                               {forecast.carName}
                             </Text>
                           )}
@@ -658,7 +660,7 @@ export default function InsightsScreen() {
                             paddingHorizontal: 8,
                             paddingVertical: 4,
                             borderRadius: 8,
-                            backgroundColor: isOverdue ? "#EF4444" : isSoon ? "#D97706" : "#2563EB",
+                            backgroundColor: isOverdue ? "#EF4444" : isSoon ? "#D97706" : colors.primary,
                           }}
                         >
                           <Text style={{ fontSize: 9, fontWeight: "800", color: "#fff", textTransform: "uppercase" }}>
@@ -667,16 +669,16 @@ export default function InsightsScreen() {
                         </View>
                       </View>
 
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 12, borderTopWidth: 1, borderTopColor: isOverdue ? "#FEE2E2" : isSoon ? "#FEF3C7" : "#E2E8F0", paddingTop: 10 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 12, borderTopWidth: 1, borderTopColor: isOverdue ? "#EF4444" : isSoon ? "#D97706" : colors.border, paddingTop: 10 }}>
                         <View>
-                          <Text style={{ fontSize: 9, color: "#64748B", fontWeight: "700" }}>REMAINING</Text>
-                          <Text style={{ fontSize: 12, fontWeight: "800", color: isOverdue ? "#EF4444" : "#1E293B", marginTop: 2 }}>
+                          <Text style={{ fontSize: 9, color: colors.textMuted, fontWeight: "700" }}>REMAINING</Text>
+                          <Text style={{ fontSize: 12, fontWeight: "800", color: isOverdue ? "#EF4444" : colors.text, marginTop: 2 }}>
                             {isOverdue ? "None" : convertAndFormatDistance(forecast.distRemaining, prefDistanceUnit)}
                           </Text>
                         </View>
                         <View style={{ alignItems: "flex-end" }}>
-                          <Text style={{ fontSize: 9, color: "#64748B", fontWeight: "700" }}>EST. DUE DATE</Text>
-                          <Text style={{ fontSize: 12, fontWeight: "800", color: "#1E293B", marginTop: 2 }}>
+                          <Text style={{ fontSize: 9, color: colors.textMuted, fontWeight: "700" }}>EST. DUE DATE</Text>
+                          <Text style={{ fontSize: 12, fontWeight: "800", color: colors.text, marginTop: 2 }}>
                             {forecast.forecastedDate}
                           </Text>
                         </View>
@@ -686,7 +688,7 @@ export default function InsightsScreen() {
                 })}
               </View>
             ) : (
-              <Text style={{ textAlign: "center", color: "#64748B", fontSize: 13, paddingVertical: 12 }}>
+              <Text style={{ textAlign: "center", color: colors.textMuted, fontSize: 13, paddingVertical: 12 }}>
                 No active service schedules set for forecasting.
               </Text>
             )}

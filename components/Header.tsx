@@ -1,10 +1,10 @@
-
 import "@/global.css";
 import { useUser, useAuth } from "@clerk/expo";
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from "react";
 import { Image, Text, View, TouchableOpacity, Modal } from "react-native";
 import { useRouter } from "expo-router";
+import { useTheme } from "@/app/context/ThemeContext";
 
 interface HeaderProps {
     showBack?: boolean;
@@ -19,6 +19,7 @@ const Header = ({ showBack, title, subtitle, rightElement, hideProfile }: Header
     const { signOut } = useAuth();
     const [showMenu, setShowMenu] = useState(false);
     const router = useRouter();
+    const { colors, theme } = useTheme();
 
     const handleSignOut = async () => {
         setShowMenu(false);
@@ -30,26 +31,26 @@ const Header = ({ showBack, title, subtitle, rightElement, hideProfile }: Header
     };
 
     return (
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, paddingVertical: 16, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, paddingVertical: 16, backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
                 {showBack ? (
-                    <TouchableOpacity onPress={() => router.back()} style={{ backgroundColor: "#F1F5F9", padding: 8, borderRadius: 12 }}>
-                        <Ionicons name="arrow-back" size={20} color="#1E293B" />
+                    <TouchableOpacity onPress={() => router.back()} style={{ backgroundColor: colors.accent, padding: 8, borderRadius: 12 }}>
+                        <Ionicons name="arrow-back" size={20} color={colors.text} />
                     </TouchableOpacity>
                 ) : (
-                    <View style={{ backgroundColor: "#2563EB", borderRadius: 12, width: 36, height: 36, justifyContent: "center", alignItems: "center" }}>
+                    <View style={{ backgroundColor: colors.primary, borderRadius: 12, width: 36, height: 36, justifyContent: "center", alignItems: "center" }}>
                         <Ionicons name="car-sport" size={20} color="#fff" />
                     </View>
                 )}
                 <View style={{ flex: 1 }}>
                     {title ? (
                         <>
-                            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1E293B" }} numberOfLines={1}>{title}</Text>
-                            {subtitle && <Text style={{ fontSize: 11, color: "#64748B", marginTop: 2 }} numberOfLines={1}>{subtitle}</Text>}
+                            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.text }} numberOfLines={1}>{title}</Text>
+                            {subtitle && <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }} numberOfLines={1}>{subtitle}</Text>}
                         </>
                     ) : (
-                        <Text style={{ fontSize: 20, fontWeight: "800", color: "#111827", letterSpacing: -0.5 }}>
-                            Auto<Text style={{ color: "#2563EB" }}>Track</Text>
+                        <Text style={{ fontSize: 20, fontWeight: "800", color: colors.text, letterSpacing: -0.5 }}>
+                            Auto<Text style={{ color: colors.primary }}>Track</Text>
                         </Text>
                     )}
                 </View>
@@ -63,11 +64,11 @@ const Header = ({ showBack, title, subtitle, rightElement, hideProfile }: Header
                         {user?.imageUrl ? (
                             <Image
                                 source={{ uri: user.imageUrl }}
-                                style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: "#E2E8F0" }}
+                                style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.border }}
                             />
                         ) : (
-                            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#E2E8F0", justifyContent: "center", alignItems: "center" }}>
-                                <Ionicons name="person" size={22} color="#475569" />
+                            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.border, justifyContent: "center", alignItems: "center" }}>
+                                <Ionicons name="person" size={22} color={colors.textMuted} />
                             </View>
                         )}
                     </TouchableOpacity>
@@ -79,27 +80,27 @@ const Header = ({ showBack, title, subtitle, rightElement, hideProfile }: Header
                 <TouchableOpacity 
                     activeOpacity={1} 
                     onPress={() => setShowMenu(false)}
-                    style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 24 }}
+                    style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }}
                 >
                     <TouchableOpacity 
                         activeOpacity={1}
-                        style={{ backgroundColor: "#fff", borderRadius: 24, padding: 24, width: "100%", maxWidth: 320, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, elevation: 10, alignItems: "center" }}
+                        style={{ backgroundColor: colors.card, borderRadius: 24, padding: 24, width: "100%", maxWidth: 320, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, elevation: 10, alignItems: "center", borderWidth: 1, borderColor: colors.border }}
                     >
                         {user?.imageUrl ? (
                             <Image
                                 source={{ uri: user.imageUrl }}
-                                style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: "#E2E8F0", marginBottom: 16 }}
+                                style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: colors.border, marginBottom: 16 }}
                             />
                         ) : (
-                            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "#E2E8F0", justifyContent: "center", alignItems: "center", marginBottom: 16 }}>
-                                <Ionicons name="person" size={48} color="#475569" />
+                            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", marginBottom: 16 }}>
+                                <Ionicons name="person" size={48} color={colors.textMuted} />
                             </View>
                         )}
 
-                        <Text style={{ fontSize: 18, fontWeight: "800", color: "#1E293B", textAlign: "center" }}>
+                        <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text, textAlign: "center" }}>
                             {user?.fullName || "User Profile"}
                         </Text>
-                        <Text style={{ fontSize: 13, color: "#64748B", textAlign: "center", marginTop: 4, marginBottom: 24 }}>
+                        <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center", marginTop: 4, marginBottom: 24 }}>
                             {user?.primaryEmailAddress?.emailAddress || ""}
                         </Text>
 
@@ -114,17 +115,17 @@ const Header = ({ showBack, title, subtitle, rightElement, hideProfile }: Header
 
                             <TouchableOpacity 
                                 onPress={handleSignOut}
-                                style={{ backgroundColor: "#F1F5F9", paddingVertical: 14, borderRadius: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+                                style={{ backgroundColor: colors.accent, paddingVertical: 14, borderRadius: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
                             >
-                                <Ionicons name="people-outline" size={18} color="#475569" />
-                                <Text style={{ color: "#475569", fontWeight: "700", fontSize: 15 }}>Switch Account</Text>
+                                <Ionicons name="people-outline" size={18} color={colors.text} />
+                                <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }}>Switch Account</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity 
                                 onPress={() => setShowMenu(false)}
                                 style={{ paddingVertical: 14, alignItems: "center" }}
                             >
-                                <Text style={{ color: "#94A3B8", fontWeight: "600", fontSize: 14 }}>Cancel</Text>
+                                <Text style={{ color: colors.textMuted, fontWeight: "600", fontSize: 14 }}>Cancel</Text>
                             </TouchableOpacity>
                         </View>
                     </TouchableOpacity>

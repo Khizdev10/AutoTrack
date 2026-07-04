@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "@/app/context/ThemeContext";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
@@ -45,6 +46,7 @@ export default function SettingsScreen() {
   const { signOut, getToken } = useAuth();
   const { user } = useUser();
   const isFocused = useIsFocused();
+  const { theme, colors, toggleTheme } = useTheme();
 
   // Settings State
   const [currency, setCurrency] = useState("Rs.");
@@ -185,13 +187,13 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F8FAFC" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       {/* ── HEADER ── */}
       <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 }}>
-        <Text style={{ fontSize: 11, fontWeight: "900", color: "#2563EB", letterSpacing: 1.5, textTransform: "uppercase" }}>
+        <Text style={{ fontSize: 11, fontWeight: "900", color: colors.primary, letterSpacing: 1.5, textTransform: "uppercase" }}>
           Preferences
         </Text>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: "#0F172A", marginTop: 4 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: colors.text, marginTop: 4 }}>
           Settings Hub
         </Text>
       </View>
@@ -199,18 +201,18 @@ export default function SettingsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
         
         {/* ── USER PROFILE SECTION ── */}
-        <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 20, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#F1F5F9" }}>
+        <View style={{ backgroundColor: colors.card, borderRadius: 24, padding: 20, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 999, backgroundColor: "#E5E7EB", justifyContent: "center", alignItems: "center" }}>
-              <Text style={{ fontSize: 18, fontWeight: "800", color: "#4B5563" }}>
+            <View style={{ width: 48, height: 48, borderRadius: 999, backgroundColor: colors.border, justifyContent: "center", alignItems: "center" }}>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>
                 {user?.firstName ? user.firstName[0].toUpperCase() : "U"}
               </Text>
             </View>
             <View>
-              <Text style={{ fontSize: 16, fontWeight: "800", color: "#1E293B" }}>
+              <Text style={{ fontSize: 16, fontWeight: "800", color: colors.text }}>
                 {user?.fullName || "AutoTrack User"}
               </Text>
-              <Text style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
+              <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
                 {user?.primaryEmailAddress?.emailAddress || "Logged In"}
               </Text>
             </View>
@@ -220,50 +222,73 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── APPEARANCE GROUP ── */}
+        <Text style={{ fontSize: 11, fontWeight: "800", color: colors.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 6 }}>
+          Appearance
+        </Text>
+
+        <View style={{ backgroundColor: colors.card, borderRadius: 24, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border }}>
+          {/* Theme Option */}
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ backgroundColor: colors.accent, padding: 8, borderRadius: 10 }}>
+                <Ionicons name={theme === "dark" ? "moon-outline" : "sunny-outline"} size={18} color={theme === "dark" ? "#60A5FA" : "#475569"} />
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Dark Mode</Text>
+            </View>
+            <Switch
+              value={theme === "dark"}
+              onValueChange={toggleTheme}
+              trackColor={{ false: "#E2E8F0", true: "#86EFAC" }}
+              thumbColor={theme === "dark" ? "#10B981" : "#94A3B8"}
+            />
+          </View>
+        </View>
+
         {/* ── PREFERENCES GROUP ── */}
-        <Text style={{ fontSize: 11, fontWeight: "800", color: "#64748B", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 6 }}>
+        <Text style={{ fontSize: 11, fontWeight: "800", color: colors.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 6 }}>
           Measurement Units
         </Text>
 
-        <View style={{ backgroundColor: "#fff", borderRadius: 24, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 20, borderWidth: 1, borderColor: "#F1F5F9" }}>
+        <View style={{ backgroundColor: colors.card, borderRadius: 24, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border }}>
           {/* Currency Preference */}
           <TouchableOpacity
             onPress={() => setShowCurrencyModal(true)}
-            style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}
+            style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ backgroundColor: "#ECFDF5", padding: 8, borderRadius: 10 }}>
-                <Ionicons name="cash-outline" size={18} color="#10B981" />
+              <View style={{ backgroundColor: colors.greenBg, padding: 8, borderRadius: 10 }}>
+                <Ionicons name="cash-outline" size={18} color={colors.greenText} />
               </View>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#334155" }}>Currency</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Currency</Text>
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#64748B" }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textMuted }}>
                 {CURRENCIES.find((c) => c.value === currency)?.label.split(" ")[0] || currency}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
           </TouchableOpacity>
 
           {/* Distance Unit Preference */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ backgroundColor: "#EFF6FF", padding: 8, borderRadius: 10 }}>
-                <Ionicons name="speedometer-outline" size={18} color="#2563EB" />
+              <View style={{ backgroundColor: colors.accent, padding: 8, borderRadius: 10 }}>
+                <Ionicons name="speedometer-outline" size={18} color={colors.primary} />
               </View>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#334155" }}>Distance Unit</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Distance Unit</Text>
             </View>
-            <View style={{ flexDirection: "row", backgroundColor: "#F1F5F9", borderRadius: 10, padding: 3, gap: 4 }}>
+            <View style={{ flexDirection: "row", backgroundColor: colors.accent, borderRadius: 10, padding: 3, gap: 4 }}>
               <TouchableOpacity
                 onPress={toggleDistanceUnit}
                 style={{
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 8,
-                  backgroundColor: distanceUnit === "km" ? "#fff" : "transparent",
+                  backgroundColor: distanceUnit === "km" ? colors.card : "transparent",
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: "800", color: distanceUnit === "km" ? "#1E293B" : "#64748B" }}>KM</Text>
+                <Text style={{ fontSize: 11, fontWeight: "800", color: colors.text }}>KM</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={toggleDistanceUnit}
@@ -271,10 +296,10 @@ export default function SettingsScreen() {
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 8,
-                  backgroundColor: distanceUnit === "mi" ? "#fff" : "transparent",
+                  backgroundColor: distanceUnit === "mi" ? colors.card : "transparent",
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: "800", color: distanceUnit === "mi" ? "#1E293B" : "#64748B" }}>MI</Text>
+                <Text style={{ fontSize: 11, fontWeight: "800", color: colors.text }}>MI</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -282,22 +307,22 @@ export default function SettingsScreen() {
           {/* Volume Unit Preference */}
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ backgroundColor: "#FFFBEB", padding: 8, borderRadius: 10 }}>
-                <Ionicons name="water-outline" size={18} color="#D97706" />
+              <View style={{ backgroundColor: colors.yellowBg, padding: 8, borderRadius: 10 }}>
+                <Ionicons name="water-outline" size={18} color={colors.yellowText} />
               </View>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#334155" }}>Fuel Volume</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Fuel Volume</Text>
             </View>
-            <View style={{ flexDirection: "row", backgroundColor: "#F1F5F9", borderRadius: 10, padding: 3, gap: 4 }}>
+            <View style={{ flexDirection: "row", backgroundColor: colors.accent, borderRadius: 10, padding: 3, gap: 4 }}>
               <TouchableOpacity
                 onPress={toggleVolumeUnit}
                 style={{
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 8,
-                  backgroundColor: volumeUnit === "L" ? "#fff" : "transparent",
+                  backgroundColor: volumeUnit === "L" ? colors.card : "transparent",
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: "800", color: volumeUnit === "L" ? "#1E293B" : "#64748B" }}>LITERS</Text>
+                <Text style={{ fontSize: 11, fontWeight: "800", color: colors.text }}>LITERS</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={toggleVolumeUnit}
@@ -305,28 +330,28 @@ export default function SettingsScreen() {
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 8,
-                  backgroundColor: volumeUnit === "gal" ? "#fff" : "transparent",
+                  backgroundColor: volumeUnit === "gal" ? colors.card : "transparent",
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: "800", color: volumeUnit === "gal" ? "#1E293B" : "#64748B" }}>GALS</Text>
+                <Text style={{ fontSize: 11, fontWeight: "800", color: colors.text }}>GALS</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
         {/* ── APP OPTIONS GROUP ── */}
-        <Text style={{ fontSize: 11, fontWeight: "800", color: "#64748B", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 6 }}>
+        <Text style={{ fontSize: 11, fontWeight: "800", color: colors.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 6 }}>
           Notifications
         </Text>
 
-        <View style={{ backgroundColor: "#fff", borderRadius: 24, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 20, borderWidth: 1, borderColor: "#F1F5F9" }}>
+        <View style={{ backgroundColor: colors.card, borderRadius: 24, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10 }}>
             <View style={{ backgroundColor: "#F5F3FF", padding: 8, borderRadius: 10, marginRight: 12 }}>
               <Ionicons name="notifications-outline" size={18} color="#7C3AED" />
             </View>
             <View style={{ flex: 1, marginRight: 12 }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#334155" }}>Service Reminders</Text>
-              <Text style={{ fontSize: 10, color: "#64748B", marginTop: 2 }}>Notify when service limit approaches</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Service Reminders</Text>
+              <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 2 }}>Notify when service limit approaches</Text>
             </View>
             <Switch
               value={remindersEnabled}
@@ -338,28 +363,28 @@ export default function SettingsScreen() {
         </View>
 
         {/* ── DATA MANAGEMENT GROUP ── */}
-        <Text style={{ fontSize: 11, fontWeight: "800", color: "#64748B", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 6 }}>
+        <Text style={{ fontSize: 11, fontWeight: "800", color: colors.textMuted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 6 }}>
           Data & Support
         </Text>
 
-        <View style={{ backgroundColor: "#fff", borderRadius: 24, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 20, borderWidth: 1, borderColor: "#F1F5F9" }}>
+        <View style={{ backgroundColor: colors.card, borderRadius: 24, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border }}>
           {/* Export Logs */}
           <TouchableOpacity
             onPress={handleExportData}
             disabled={isExporting}
-            style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}
+            style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ backgroundColor: "#EFF6FF", padding: 8, borderRadius: 10 }}>
+              <View style={{ backgroundColor: colors.accent, padding: 8, borderRadius: 10 }}>
                 {isExporting ? (
-                  <ActivityIndicator size="small" color="#2563EB" />
+                  <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
-                  <Ionicons name="download-outline" size={18} color="#2563EB" />
+                  <Ionicons name="download-outline" size={18} color={colors.primary} />
                 )}
               </View>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#334155" }}>Export Backup (CSV)</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Export Backup (CSV)</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
 
           {/* Reset Cache */}
@@ -371,14 +396,14 @@ export default function SettingsScreen() {
               <View style={{ backgroundColor: "#FEF2F2", padding: 8, borderRadius: 10 }}>
                 <Ionicons name="trash-outline" size={18} color="#EF4444" />
               </View>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#334155" }}>Reset Local Cache</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>Reset Local Cache</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         {/* Footer info */}
-        <Text style={{ textAlign: "center", fontSize: 11, color: "#94A3B8", marginTop: 10 }}>
+        <Text style={{ textAlign: "center", fontSize: 11, color: colors.textMuted, marginTop: 10 }}>
           AutoTrack Mobile v1.0.0
         </Text>
 
@@ -389,21 +414,21 @@ export default function SettingsScreen() {
         <TouchableOpacity
           activeOpacity={1}
           onPress={() => setShowCurrencyModal(false)}
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 20 }}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 20 }}
         >
-          <View style={{ backgroundColor: "#fff", borderRadius: 24, width: "100%", padding: 24, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
-            <Text style={{ fontSize: 16, fontWeight: "800", color: "#1E293B", marginBottom: 16 }}>Select Currency</Text>
+          <View style={{ backgroundColor: colors.card, borderRadius: 24, width: "100%", padding: 24, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 10, elevation: 5, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: colors.text, marginBottom: 16 }}>Select Currency</Text>
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 300 }}>
               {CURRENCIES.map((curr) => (
                 <TouchableOpacity
                   key={curr.value}
                   onPress={() => updateCurrency(curr.value)}
-                  style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+                  style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
                 >
-                  <Text style={{ fontSize: 15, fontWeight: currency === curr.value ? "700" : "500", color: currency === curr.value ? "#2563EB" : "#334155" }}>
+                  <Text style={{ fontSize: 15, fontWeight: currency === curr.value ? "700" : "500", color: currency === curr.value ? colors.primary : colors.text }}>
                     {curr.label}
                   </Text>
-                  {currency === curr.value && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+                  {currency === curr.value && <Ionicons name="checkmark" size={18} color={colors.primary} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -413,26 +438,26 @@ export default function SettingsScreen() {
 
       {/* ── CSV PREVIEW MODAL ── */}
       <Modal transparent visible={showCsvModal} animationType="slide" onRequestClose={() => setShowCsvModal(false)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: "#fff", borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, height: "80%" }}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, height: "80%", borderWidth: 1, borderColor: colors.border }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <Text style={{ fontSize: 18, fontWeight: "800", color: "#1E293B" }}>CSV Backup Data</Text>
-              <TouchableOpacity onPress={() => setShowCsvModal(false)} style={{ backgroundColor: "#F1F5F9", borderRadius: 50, padding: 8 }}>
-                <Ionicons name="close" size={20} color="#374151" />
+              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.text }}>CSV Backup Data</Text>
+              <TouchableOpacity onPress={() => setShowCsvModal(false)} style={{ backgroundColor: colors.accent, borderRadius: 50, padding: 8 }}>
+                <Ionicons name="close" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
-            <Text style={{ fontSize: 12, color: "#64748B", marginBottom: 12 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginBottom: 12 }}>
               The following backup data has been copied to your clipboard.
             </Text>
-            <ScrollView style={{ flex: 1, backgroundColor: "#F8FAFC", borderRadius: 16, padding: 12, borderWidth: 1, borderColor: "#E2E8F0" }}>
-              <Text style={{ fontSize: 10, fontFamily: "monospace", color: "#334155" }}>{exportedCsv}</Text>
+            <ScrollView style={{ flex: 1, backgroundColor: colors.background, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ fontSize: 10, fontFamily: "monospace", color: colors.text }}>{exportedCsv}</Text>
             </ScrollView>
             <TouchableOpacity
               onPress={() => {
                 Clipboard.setString(exportedCsv || "");
                 Alert.alert("Copied", "Copied to clipboard!");
               }}
-              style={{ backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 16 }}
+              style={{ backgroundColor: colors.primary, borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 16 }}
             >
               <Text style={{ color: "#fff", fontWeight: "700" }}>Recopy Data</Text>
             </TouchableOpacity>
