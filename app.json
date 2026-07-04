@@ -9,7 +9,15 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location"
+        ],
+        "NSLocationWhenInUseUsageDescription": "AutoTrack uses your location to track your driving distance and update your odometer in real-time.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "AutoTrack requires background location access to track your drives and log mileage even when the screen is off.",
+        "NSLocationAlwaysUsageDescription": "AutoTrack requires background location access to track your drives and log mileage even when the screen is off."
+      }
     },
     "android": {
       "package": "com.autotrack.app",
@@ -22,6 +30,11 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
         "android.permission.RECORD_AUDIO"
       ]
     },

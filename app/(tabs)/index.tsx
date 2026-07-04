@@ -25,6 +25,11 @@ import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-
 
 const SafeAreaView = styled(RNSafeAreaView);
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 export default function App() {
   const [cars, setCars] = useState<any[]>([]);
   const insets = useSafeAreaInsets();
@@ -36,8 +41,129 @@ export default function App() {
   const [showAddCar, setShowAddCar] = useState(false);
   const [selectedCarForMenu, setSelectedCarForMenu] = useState<any>(null);
 
-  const [totalMaintenanceCost, setTotalMaintenanceCost] = useState(0);
-  const [totalPetrolCost, setTotalPetrolCost] = useState(0);
+  const [allServiceLogs, setAllServiceLogs] = useState<any[]>([]);
+  const [allPetrolLogs, setAllPetrolLogs] = useState<any[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all'); // 0-indexed (0 = Jan)
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+
+  const getUniqueYears = () => {
+    const yearsSet = new Set<number>();
+    yearsSet.add(new Date().getFullYear());
+    
+    allServiceLogs.forEach(log => {
+      if (log.date_performed) {
+        const y = new Date(log.date_performed).getFullYear();
+        if (!isNaN(y)) yearsSet.add(y);
+      }
+    });
+    allPetrolLogs.forEach(log => {
+      if (log.date) {
+        const y = new Date(log.date).getFullYear();
+        if (!isNaN(y)) yearsSet.add(y);
+      }
+    });
+    return Array.from(yearsSet).sort((a, b) => b - a);
+  };
+
+  const filterLogsByYearAndMonth = (logsList: any[], dateField: string) => {
+    return logsList.filter(log => {
+      if (!log[dateField]) return false;
+      const logDate = new Date(log[dateField]);
+      if (isNaN(logDate.getTime())) return false;
+      
+      const matchYear = selectedYear === 'all' || logDate.getFullYear() === selectedYear;
+      const matchMonth = selectedMonth === 'all' || logDate.getMonth() === selectedMonth;
+      
+      return matchYear && matchMonth;
+    });
+  };
+
+  const filteredServiceLogs = filterLogsByYearAndMonth(allServiceLogs, 'date_performed');
+  const filteredPetrolLogs = filterLogsByYearAndMonth(allPetrolLogs, 'date');
+
+  const totalMaintenanceCost = filteredServiceLogs.reduce((sum, item) => sum + parseFloat(item.cost || 0), 0);
+  const totalPetrolCost = filteredPetrolLogs.reduce((sum, item) => sum + parseFloat(item.total_cost || 0), 0);
+
+  const [breakdownTab, setBreakdownTab] = useState<'monthly' | 'yearly'>('monthly');
+
+  const getMonthlyBreakdown = (serviceLogsList: any[], petrolLogsList: any[]) => {
+    const breakdown: { [key: string]: { service: number; petrol: number; total: number } } = {};
+    
+    serviceLogsList.forEach(log => {
+      if (!log.date_performed || !log.cost) return;
+      const date = new Date(log.date_performed);
+      if (isNaN(date.getTime())) return;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!breakdown[key]) {
+        breakdown[key] = { service: 0, petrol: 0, total: 0 };
+      }
+      breakdown[key].service += parseFloat(log.cost || 0);
+      breakdown[key].total += parseFloat(log.cost || 0);
+    });
+
+    petrolLogsList.forEach(log => {
+      if (!log.date || !log.total_cost) return;
+      const date = new Date(log.date);
+      if (isNaN(date.getTime())) return;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!breakdown[key]) {
+        breakdown[key] = { service: 0, petrol: 0, total: 0 };
+      }
+      breakdown[key].petrol += parseFloat(log.total_cost || 0);
+      breakdown[key].total += parseFloat(log.total_cost || 0);
+    });
+
+    return Object.entries(breakdown)
+      .map(([key, val]) => {
+        const [year, month] = key.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const label = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        return { key, label, year: parseInt(year), ...val };
+      })
+      .sort((a, b) => b.key.localeCompare(a.key));
+  };
+
+  const getYearlyBreakdown = (serviceLogsList: any[], petrolLogsList: any[]) => {
+    const breakdown: { [key: number]: { service: number; petrol: number; total: number } } = {};
+
+    serviceLogsList.forEach(log => {
+      if (!log.date_performed || !log.cost) return;
+      const date = new Date(log.date_performed);
+      if (isNaN(date.getTime())) return;
+      const year = date.getFullYear();
+      if (!breakdown[year]) {
+        breakdown[year] = { service: 0, petrol: 0, total: 0 };
+      }
+      breakdown[year].service += parseFloat(log.cost || 0);
+      breakdown[year].total += parseFloat(log.cost || 0);
+    });
+
+    petrolLogsList.forEach(log => {
+      if (!log.date || !log.total_cost) return;
+      const date = new Date(log.date);
+      if (isNaN(date.getTime())) return;
+      const year = date.getFullYear();
+      if (!breakdown[year]) {
+        breakdown[year] = { service: 0, petrol: 0, total: 0 };
+      }
+      breakdown[year].petrol += parseFloat(log.total_cost || 0);
+      breakdown[year].total += parseFloat(log.total_cost || 0);
+    });
+
+    return Object.entries(breakdown)
+      .map(([yearStr, val]) => ({
+        year: parseInt(yearStr),
+        label: yearStr,
+        ...val
+      }))
+      .sort((a, b) => b.year - a.year);
+  };
+
+  const monthlyBreakdown = getMonthlyBreakdown(allServiceLogs, allPetrolLogs);
+  const yearlyBreakdown = getYearlyBreakdown(allServiceLogs, allPetrolLogs);
+
 
   const getServiceStatus = (car: any) => {
     if (!car.service_schedules || car.service_schedules.length === 0) {
@@ -88,18 +214,16 @@ export default function App() {
       // Fetch overall stats
       const { data: serviceLogs } = await supabase
         .from("service_logs")
-        .select("cost");
+        .select("cost, date_performed");
       if (serviceLogs) {
-        const totalM = serviceLogs.reduce((sum, item) => sum + parseFloat(item.cost || 0), 0);
-        setTotalMaintenanceCost(totalM);
+        setAllServiceLogs(serviceLogs);
       }
 
       const { data: petrolLogs } = await supabase
         .from("petrol_logs")
-        .select("total_cost");
+        .select("total_cost, date");
       if (petrolLogs) {
-        const totalP = petrolLogs.reduce((sum, item) => sum + parseFloat(item.total_cost || 0), 0);
-        setTotalPetrolCost(totalP);
+        setAllPetrolLogs(petrolLogs);
       }
     } catch (err) {
       console.error(err);
@@ -533,6 +657,37 @@ export default function App() {
             )}
           </View>
 
+          {/* YEAR & MONTH FILTERS DROPDOWNS */}
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 20 }}>
+            {/* Year Selector */}
+            <TouchableOpacity
+              onPress={() => setShowYearPicker(true)}
+              style={{ flex: 1, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 }}
+            >
+              <View>
+                <Text style={{ fontSize: 9, fontWeight: "800", color: "#64748B", letterSpacing: 0.5, marginBottom: 2 }}>YEAR</Text>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E293B" }}>
+                  {selectedYear === 'all' ? 'All Years' : selectedYear}
+                </Text>
+              </View>
+              <Ionicons name="chevron-down" size={16} color="#64748B" />
+            </TouchableOpacity>
+
+            {/* Month Selector */}
+            <TouchableOpacity
+              onPress={() => setShowMonthPicker(true)}
+              style={{ flex: 1, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 }}
+            >
+              <View>
+                <Text style={{ fontSize: 9, fontWeight: "800", color: "#64748B", letterSpacing: 0.5, marginBottom: 2 }}>MONTH</Text>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E293B" }}>
+                  {selectedMonth === 'all' ? 'All Months' : MONTHS[selectedMonth]}
+                </Text>
+              </View>
+              <Ionicons name="chevron-down" size={16} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+
           {/* Overall Stats Cards */}
           <View style={{ flexDirection: "row", gap: 12, marginBottom: 20 }}>
             {/* Maintenance Card */}
@@ -622,6 +777,107 @@ export default function App() {
               </TouchableOpacity>
             </TouchableOpacity>
           </Modal>
+
+          {/* SPENDING BREAKDOWN CARD */}
+          <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: "#334155", letterSpacing: 0.5 }}>SPENDING BREAKDOWN</Text>
+              <View style={{ flexDirection: "row", backgroundColor: "#F1F5F9", padding: 2, borderRadius: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setBreakdownTab('monthly')}
+                  style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: breakdownTab === 'monthly' ? '#fff' : 'transparent' }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: breakdownTab === 'monthly' ? '#1E293B' : '#64748B' }}>Monthly</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setBreakdownTab('yearly')}
+                  style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: breakdownTab === 'yearly' ? '#fff' : 'transparent' }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: breakdownTab === 'yearly' ? '#1E293B' : '#64748B' }}>Yearly</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {breakdownTab === 'monthly' ? (
+              monthlyBreakdown.length === 0 ? (
+                <Text style={{ color: "#94A3B8", textAlign: "center", marginVertical: 12, fontSize: 13 }}>No spending data recorded.</Text>
+              ) : (
+                <View style={{ gap: 16 }}>
+                  {monthlyBreakdown.map((item) => {
+                    return (
+                      <View key={item.key} style={{ gap: 6 }}>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                          <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{item.label}</Text>
+                          <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>Rs. {item.total.toLocaleString()}</Text>
+                        </View>
+                        <View style={{ height: 6, backgroundColor: "#F1F5F9", borderRadius: 3, overflow: "hidden", flexDirection: "row" }}>
+                          {item.service > 0 && (
+                            <View style={{ flex: item.service, backgroundColor: "#D97706" }} />
+                          )}
+                          {item.petrol > 0 && (
+                            <View style={{ flex: item.petrol, backgroundColor: "#16A34A" }} />
+                          )}
+                        </View>
+                        <View style={{ flexDirection: "row", gap: 12 }}>
+                          {item.service > 0 && (
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706" }} />
+                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: Rs. {item.service.toLocaleString()}</Text>
+                            </View>
+                          )}
+                          {item.petrol > 0 && (
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16A34A" }} />
+                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: Rs. {item.petrol.toLocaleString()}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )
+            ) : (
+              yearlyBreakdown.length === 0 ? (
+                <Text style={{ color: "#94A3B8", textAlign: "center", marginVertical: 12, fontSize: 13 }}>No spending data recorded.</Text>
+              ) : (
+                <View style={{ gap: 16 }}>
+                  {yearlyBreakdown.map((item) => {
+                    return (
+                      <View key={item.year} style={{ gap: 6 }}>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                          <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{item.label}</Text>
+                          <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>Rs. {item.total.toLocaleString()}</Text>
+                        </View>
+                        <View style={{ height: 6, backgroundColor: "#F1F5F9", borderRadius: 3, overflow: "hidden", flexDirection: "row" }}>
+                          {item.service > 0 && (
+                            <View style={{ flex: item.service, backgroundColor: "#D97706" }} />
+                          )}
+                          {item.petrol > 0 && (
+                            <View style={{ flex: item.petrol, backgroundColor: "#16A34A" }} />
+                          )}
+                        </View>
+                        <View style={{ flexDirection: "row", gap: 12 }}>
+                          {item.service > 0 && (
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706" }} />
+                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: Rs. {item.service.toLocaleString()}</Text>
+                            </View>
+                          )}
+                          {item.petrol > 0 && (
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16A34A" }} />
+                              <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: Rs. {item.petrol.toLocaleString()}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )
+            )}
+          </View>
 
           <View style={{ flexDirection: "column", gap: 20, paddingBottom: 100 + insets.bottom }}>
             {filteredCars.length === 0 ? (
@@ -730,6 +986,70 @@ export default function App() {
           </View>
         </ScrollView>
       )}
+      {/* Year Picker Modal */}
+      <Modal transparent visible={showYearPicker} animationType="fade" onRequestClose={() => setShowYearPicker(false)}>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowYearPicker(false)}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 20 }}
+        >
+          <View style={{ backgroundColor: "#fff", borderRadius: 24, width: "100%", padding: 24, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: "#1E293B", marginBottom: 16 }}>Select Year</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 300 }}>
+              <TouchableOpacity
+                onPress={() => { setSelectedYear('all'); setShowYearPicker(false); }}
+                style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <Text style={{ fontSize: 15, fontWeight: selectedYear === 'all' ? '700' : '500', color: selectedYear === 'all' ? '#2563EB' : '#334155' }}>All Years</Text>
+                {selectedYear === 'all' && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+              </TouchableOpacity>
+              {getUniqueYears().map((y) => (
+                <TouchableOpacity
+                  key={y}
+                  onPress={() => { setSelectedYear(y); setShowYearPicker(false); }}
+                  style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: selectedYear === y ? '700' : '500', color: selectedYear === y ? '#2563EB' : '#334155' }}>{y}</Text>
+                  {selectedYear === y && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Month Picker Modal */}
+      <Modal transparent visible={showMonthPicker} animationType="fade" onRequestClose={() => setShowMonthPicker(false)}>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowMonthPicker(false)}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 20 }}
+        >
+          <View style={{ backgroundColor: "#fff", borderRadius: 24, width: "100%", padding: 24, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: "#1E293B", marginBottom: 16 }}>Select Month</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 350 }}>
+              <TouchableOpacity
+                onPress={() => { setSelectedMonth('all'); setShowMonthPicker(false); }}
+                style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <Text style={{ fontSize: 15, fontWeight: selectedMonth === 'all' ? '700' : '500', color: selectedMonth === 'all' ? '#2563EB' : '#334155' }}>All Months</Text>
+                {selectedMonth === 'all' && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+              </TouchableOpacity>
+              {MONTHS.map((m, idx) => (
+                <TouchableOpacity
+                  key={m}
+                  onPress={() => { setSelectedMonth(idx); setShowMonthPicker(false); }}
+                  style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: selectedMonth === idx ? '700' : '500', color: selectedMonth === idx ? '#2563EB' : '#334155' }}>{m}</Text>
+                  {selectedMonth === idx && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </SafeAreaView>
   );
 }

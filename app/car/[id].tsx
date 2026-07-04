@@ -22,6 +22,7 @@ import {
   View
 } from "react-native";
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { BACKGROUND_LOCATION_TASK } from "@/app/lib/backgroundLocation";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
@@ -40,62 +41,10 @@ function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon
   return R * c;
 }
 
-const BACKGROUND_LOCATION_TASK = "background-location-task";
-
-// Define the background location task
-TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) => {
-  if (error) {
-    console.error("Background location task error:", error);
-    return;
-  }
-  if (data) {
-    const { locations } = data;
-    if (locations && locations.length > 0) {
-      try {
-        const newLocation = locations[0];
-        const storedDataStr = await AsyncStorage.getItem("temp_trip_tracking");
-        let trackingData = storedDataStr
-          ? JSON.parse(storedDataStr)
-          : { tripDistance: 0, lastCoords: null };
-
-        if (trackingData.lastCoords) {
-          const lat1 = trackingData.lastCoords.latitude;
-          const lon1 = trackingData.lastCoords.longitude;
-          const lat2 = newLocation.coords.latitude;
-          const lon2 = newLocation.coords.longitude;
-
-          // Haversine formula
-          const R = 6371; // km
-          const dLat = (lat2 - lat1) * Math.PI / 180;
-          const dLon = (lon2 - lon1) * Math.PI / 180;
-          const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          const dist = R * c; // distance in km
-
-          // Speed filtering: walking speed is usually under 2.2 m/s (~8 km/h).
-          const speed = newLocation.coords.speed;
-          const isDriving = speed === null || speed === undefined || speed > 2.2;
-
-          if (isDriving && dist > 0) {
-            trackingData.tripDistance += dist;
-          }
-        }
-
-        trackingData.lastCoords = {
-          latitude: newLocation.coords.latitude,
-          longitude: newLocation.coords.longitude
-        };
-
-        await AsyncStorage.setItem("temp_trip_tracking", JSON.stringify(trackingData));
-      } catch (err) {
-        console.error("Error saving background location:", err);
-      }
-    }
-  }
-});
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 const PRESET_SCHEDULES = [
   { label: "Oil Change", interval: "8000" },
@@ -154,7 +103,48 @@ export default function CarDetailScreen() {
 
   const [manualMileage, setManualMileage] = useState("");
 
-  const totalPetrolSpent = petrolLogs.reduce((sum, log) => sum + (log.total_cost || 0), 0);
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all'); // 0-indexed (0 = Jan)
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+
+  const getUniqueYears = () => {
+    const yearsSet = new Set<number>();
+    yearsSet.add(new Date().getFullYear());
+    
+    logs.forEach(log => {
+      if (log.date_performed) {
+        const y = new Date(log.date_performed).getFullYear();
+        if (!isNaN(y)) yearsSet.add(y);
+      }
+    });
+    petrolLogs.forEach(log => {
+      if (log.date) {
+        const y = new Date(log.date).getFullYear();
+        if (!isNaN(y)) yearsSet.add(y);
+      }
+    });
+    return Array.from(yearsSet).sort((a, b) => b - a);
+  };
+
+  const filterLogsByYearAndMonth = (logsList: any[], dateField: string) => {
+    return logsList.filter(log => {
+      if (!log[dateField]) return false;
+      const logDate = new Date(log[dateField]);
+      if (isNaN(logDate.getTime())) return false;
+      
+      const matchYear = selectedYear === 'all' || logDate.getFullYear() === selectedYear;
+      const matchMonth = selectedMonth === 'all' || logDate.getMonth() === selectedMonth;
+      
+      return matchYear && matchMonth;
+    });
+  };
+
+  const filteredLogs = filterLogsByYearAndMonth(logs, 'date_performed');
+  const filteredPetrolLogs = filterLogsByYearAndMonth(petrolLogs, 'date');
+
+  const totalPetrolSpent = filteredPetrolLogs.reduce((sum, log) => sum + (log.total_cost || 0), 0);
+
 
   // GPS State
   const [isTracking, setIsTracking] = useState(false);
@@ -165,11 +155,111 @@ export default function CarDetailScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   const currentDisplayMileage = parseInt(car?.currentMileage || 0) + Math.round(tripDistance);
-  const totalSpent = logs.reduce((sum, log) => sum + (log.cost || 0), 0);
+  const totalSpent = filteredLogs.reduce((sum, log) => sum + (log.cost || 0), 0);
+
+  const [breakdownTab, setBreakdownTab] = useState<'monthly' | 'yearly'>('monthly');
+
+  const getMonthlyBreakdown = (serviceLogsList: any[], petrolLogsList: any[]) => {
+    const breakdown: { [key: string]: { service: number; petrol: number; total: number } } = {};
+    
+    serviceLogsList.forEach(log => {
+      if (!log.date_performed || !log.cost) return;
+      const date = new Date(log.date_performed);
+      if (isNaN(date.getTime())) return;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!breakdown[key]) {
+        breakdown[key] = { service: 0, petrol: 0, total: 0 };
+      }
+      breakdown[key].service += parseFloat(log.cost || 0);
+      breakdown[key].total += parseFloat(log.cost || 0);
+    });
+
+    petrolLogsList.forEach(log => {
+      if (!log.date || !log.total_cost) return;
+      const date = new Date(log.date);
+      if (isNaN(date.getTime())) return;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!breakdown[key]) {
+        breakdown[key] = { service: 0, petrol: 0, total: 0 };
+      }
+      breakdown[key].petrol += parseFloat(log.total_cost || 0);
+      breakdown[key].total += parseFloat(log.total_cost || 0);
+    });
+
+    return Object.entries(breakdown)
+      .map(([key, val]) => {
+        const [year, month] = key.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const label = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        return { key, label, year: parseInt(year), ...val };
+      })
+      .sort((a, b) => b.key.localeCompare(a.key));
+  };
+
+  const getYearlyBreakdown = (serviceLogsList: any[], petrolLogsList: any[]) => {
+    const breakdown: { [key: number]: { service: number; petrol: number; total: number } } = {};
+
+    serviceLogsList.forEach(log => {
+      if (!log.date_performed || !log.cost) return;
+      const date = new Date(log.date_performed);
+      if (isNaN(date.getTime())) return;
+      const year = date.getFullYear();
+      if (!breakdown[year]) {
+        breakdown[year] = { service: 0, petrol: 0, total: 0 };
+      }
+      breakdown[year].service += parseFloat(log.cost || 0);
+      breakdown[year].total += parseFloat(log.cost || 0);
+    });
+
+    petrolLogsList.forEach(log => {
+      if (!log.date || !log.total_cost) return;
+      const date = new Date(log.date);
+      if (isNaN(date.getTime())) return;
+      const year = date.getFullYear();
+      if (!breakdown[year]) {
+        breakdown[year] = { service: 0, petrol: 0, total: 0 };
+      }
+      breakdown[year].petrol += parseFloat(log.total_cost || 0);
+      breakdown[year].total += parseFloat(log.total_cost || 0);
+    });
+
+    return Object.entries(breakdown)
+      .map(([yearStr, val]) => ({
+        year: parseInt(yearStr),
+        label: yearStr,
+        ...val
+      }))
+      .sort((a, b) => b.year - a.year);
+  };
+
+  const monthlyBreakdown = getMonthlyBreakdown(logs, petrolLogs);
+  const yearlyBreakdown = getYearlyBreakdown(logs, petrolLogs);
+
+
+  // Sync background location status on mount
+  useEffect(() => {
+    const syncTrackingState = async () => {
+      try {
+        const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
+        setIsTracking(isRegistered);
+        if (isRegistered) {
+          const storedDataStr = await AsyncStorage.getItem("temp_trip_tracking");
+          if (storedDataStr) {
+            const trackingData = JSON.parse(storedDataStr);
+            setTripDistance(trackingData.tripDistance || 0);
+          }
+        }
+      } catch (err) {
+        console.error("Error syncing tracking state:", err);
+      }
+    };
+    syncTrackingState();
+  }, []);
 
   useEffect(() => {
     fetchCarDetails();
   }, [id]);
+
 
   useEffect(() => {
     let interval: any = null;
@@ -645,7 +735,7 @@ export default function CarDetailScreen() {
           <View style={{ width: "50%" }}>
             <Text style={{ fontSize: 10, fontWeight: "800", color: "#64748B", letterSpacing: 0.5, marginBottom: 6 }}>LAST SERVICE</Text>
             <Text style={{ fontSize: 16, color: "#1E293B", fontWeight: "700" }}>
-              {logs.length > 0 ? new Date(logs[0].date_performed).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "--"}
+              {filteredLogs.length > 0 ? new Date(filteredLogs[0].date_performed).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "--"}
             </Text>
           </View>
           <View style={{ width: "50%" }}>
@@ -655,6 +745,37 @@ export default function CarDetailScreen() {
               <Text style={{ fontSize: 16, color: "#1E293B" }}><Text style={{ fontWeight: "700" }}>{car.tire_pressure || "--"}</Text> psi</Text>
             </View>
           </View>
+        </View>
+
+        {/* YEAR & MONTH FILTERS DROPDOWNS */}
+        <View style={{ flexDirection: "row", gap: 12, marginBottom: 20 }}>
+          {/* Year Selector */}
+          <TouchableOpacity
+            onPress={() => setShowYearPicker(true)}
+            style={{ flex: 1, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 }}
+          >
+            <View>
+              <Text style={{ fontSize: 9, fontWeight: "800", color: "#64748B", letterSpacing: 0.5, marginBottom: 2 }}>YEAR</Text>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E293B" }}>
+                {selectedYear === 'all' ? 'All Years' : selectedYear}
+              </Text>
+            </View>
+            <Ionicons name="chevron-down" size={16} color="#64748B" />
+          </TouchableOpacity>
+
+          {/* Month Selector */}
+          <TouchableOpacity
+            onPress={() => setShowMonthPicker(true)}
+            style={{ flex: 1, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.02, shadowRadius: 8, elevation: 1 }}
+          >
+            <View>
+              <Text style={{ fontSize: 9, fontWeight: "800", color: "#64748B", letterSpacing: 0.5, marginBottom: 2 }}>MONTH</Text>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E293B" }}>
+                {selectedMonth === 'all' ? 'All Months' : MONTHS[selectedMonth]}
+              </Text>
+            </View>
+            <Ionicons name="chevron-down" size={16} color="#64748B" />
+          </TouchableOpacity>
         </View>
 
         {/* TOTAL SPEND CARD */}
@@ -669,7 +790,7 @@ export default function CarDetailScreen() {
             </View>
           </View>
           <View style={{ backgroundColor: "#F5F5F5", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
-            <Text style={{ color: "#737373", fontSize: 11, fontWeight: "700" }}>{logs.filter(l => l.cost).length} Logs</Text>
+            <Text style={{ color: "#737373", fontSize: 11, fontWeight: "700" }}>{filteredLogs.filter(l => l.cost).length} Logs</Text>
           </View>
         </View>
 
@@ -685,9 +806,112 @@ export default function CarDetailScreen() {
             </View>
           </View>
           <View style={{ backgroundColor: "#F5F5F5", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
-            <Text style={{ color: "#737373", fontSize: 11, fontWeight: "700" }}>{petrolLogs.length} Fill-ups</Text>
+            <Text style={{ color: "#737373", fontSize: 11, fontWeight: "700" }}>{filteredPetrolLogs.length} Fill-ups</Text>
           </View>
         </View>
+
+        {/* SPENDING BREAKDOWN CARD */}
+        <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: "#334155", letterSpacing: 0.5 }}>SPENDING BREAKDOWN</Text>
+            <View style={{ flexDirection: "row", backgroundColor: "#F1F5F9", padding: 2, borderRadius: 8 }}>
+              <TouchableOpacity
+                onPress={() => setBreakdownTab('monthly')}
+                style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: breakdownTab === 'monthly' ? '#fff' : 'transparent' }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "700", color: breakdownTab === 'monthly' ? '#1E293B' : '#64748B' }}>Monthly</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setBreakdownTab('yearly')}
+                style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, backgroundColor: breakdownTab === 'yearly' ? '#fff' : 'transparent' }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "700", color: breakdownTab === 'yearly' ? '#1E293B' : '#64748B' }}>Yearly</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {breakdownTab === 'monthly' ? (
+            monthlyBreakdown.length === 0 ? (
+              <Text style={{ color: "#94A3B8", textAlign: "center", marginVertical: 12, fontSize: 13 }}>No spending data recorded.</Text>
+            ) : (
+              <View style={{ gap: 16 }}>
+                {monthlyBreakdown.map((item) => {
+                  return (
+                    <View key={item.key} style={{ gap: 6 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                        <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{item.label}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>Rs. {item.total.toLocaleString()}</Text>
+                      </View>
+                      <View style={{ height: 6, backgroundColor: "#F1F5F9", borderRadius: 3, overflow: "hidden", flexDirection: "row" }}>
+                        {item.service > 0 && (
+                          <View style={{ flex: item.service, backgroundColor: "#D97706" }} />
+                        )}
+                        {item.petrol > 0 && (
+                          <View style={{ flex: item.petrol, backgroundColor: "#16A34A" }} />
+                        )}
+                      </View>
+                      <View style={{ flexDirection: "row", gap: 12 }}>
+                        {item.service > 0 && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706" }} />
+                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: Rs. {item.service.toLocaleString()}</Text>
+                          </View>
+                        )}
+                        {item.petrol > 0 && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16A34A" }} />
+                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: Rs. {item.petrol.toLocaleString()}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )
+          ) : (
+            yearlyBreakdown.length === 0 ? (
+              <Text style={{ color: "#94A3B8", textAlign: "center", marginVertical: 12, fontSize: 13 }}>No spending data recorded.</Text>
+            ) : (
+              <View style={{ gap: 16 }}>
+                {yearlyBreakdown.map((item) => {
+                  return (
+                    <View key={item.year} style={{ gap: 6 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                        <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>{item.label}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "800", color: "#1E293B" }}>Rs. {item.total.toLocaleString()}</Text>
+                      </View>
+                      <View style={{ height: 6, backgroundColor: "#F1F5F9", borderRadius: 3, overflow: "hidden", flexDirection: "row" }}>
+                        {item.service > 0 && (
+                          <View style={{ flex: item.service, backgroundColor: "#D97706" }} />
+                        )}
+                        {item.petrol > 0 && (
+                          <View style={{ flex: item.petrol, backgroundColor: "#16A34A" }} />
+                        )}
+                      </View>
+                      <View style={{ flexDirection: "row", gap: 12 }}>
+                        {item.service > 0 && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706" }} />
+                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Service: Rs. {item.service.toLocaleString()}</Text>
+                          </View>
+                        )}
+                        {item.petrol > 0 && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#16A34A" }} />
+                            <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "600" }}>Petrol: Rs. {item.petrol.toLocaleString()}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )
+          )}
+        </View>
+
+
 
         {/* MAINTENANCE CARD */}
         <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 24, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 }}>
@@ -765,11 +989,11 @@ export default function CarDetailScreen() {
               <Text style={{ fontSize: 12, fontWeight: "700", color: "#3B82F6" }}>Add Log</Text>
             </TouchableOpacity>
           </View>
-          {logs.length === 0 ? (
+          {filteredLogs.length === 0 ? (
             <Text style={{ color: "#94A3B8", textAlign: "center", marginVertical: 20, fontWeight: "600" }}>No recent activity.</Text>
           ) : (
             <View style={{ gap: 20 }}>
-              {logs.map((log, i) => (
+              {filteredLogs.map((log, i) => (
                 <View key={log.id} style={{ flexDirection: "row", alignItems: "center", borderTopWidth: i === 0 ? 0 : 1, borderTopColor: "#F1F5F9", paddingTop: i === 0 ? 0 : 20 }}>
                   <View style={{ backgroundColor: "#ECFDF5", padding: 12, borderRadius: 12, marginRight: 16 }}>
                     <Ionicons name="document-text" size={20} color="#10B981" />
@@ -805,7 +1029,7 @@ export default function CarDetailScreen() {
               <Text style={{ fontSize: 12, fontWeight: "700", color: "#16A34A" }}>+ Add Fill-up</Text>
             </TouchableOpacity>
           </View>
-          {petrolLogs.length === 0 ? (
+          {filteredPetrolLogs.length === 0 ? (
             <View style={{ alignItems: "center", paddingVertical: 20 }}>
               <View style={{ backgroundColor: "#DCFCE7", padding: 16, borderRadius: 50, marginBottom: 12 }}>
                 <Ionicons name="flame-outline" size={28} color="#16A34A" />
@@ -817,7 +1041,7 @@ export default function CarDetailScreen() {
             </View>
           ) : (
             <View style={{ gap: 20 }}>
-              {petrolLogs.map((log, i) => (
+              {filteredPetrolLogs.map((log, i) => (
                 <View key={log.id} style={{ flexDirection: "row", alignItems: "center", borderTopWidth: i === 0 ? 0 : 1, borderTopColor: "#F1F5F9", paddingTop: i === 0 ? 0 : 20 }}>
                   <View style={{ backgroundColor: "#DCFCE7", padding: 12, borderRadius: 12, marginRight: 16 }}>
                     <Ionicons name="flame" size={20} color="#16A34A" />
@@ -831,6 +1055,7 @@ export default function CarDetailScreen() {
                   <View style={{ alignItems: "flex-end" }}>
                     <Text style={{ fontSize: 14, fontWeight: "700", color: "#1E293B" }}>-Rs. {log.total_cost?.toLocaleString()}</Text>
                     <Text style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{new Date(log.date).toLocaleDateString()}</Text>
+
                   </View>
                   <TouchableOpacity
                     onPress={() => { setSelectedPetrolLog(log); setShowPetrolActionMenu(true); }}
@@ -1206,7 +1431,69 @@ export default function CarDetailScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      {/* Year Picker Modal */}
+      <Modal transparent visible={showYearPicker} animationType="fade" onRequestClose={() => setShowYearPicker(false)}>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowYearPicker(false)}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 20 }}
+        >
+          <View style={{ backgroundColor: "#fff", borderRadius: 24, width: "100%", padding: 24, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: "#1E293B", marginBottom: 16 }}>Select Year</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 300 }}>
+              <TouchableOpacity
+                onPress={() => { setSelectedYear('all'); setShowYearPicker(false); }}
+                style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <Text style={{ fontSize: 15, fontWeight: selectedYear === 'all' ? '700' : '500', color: selectedYear === 'all' ? '#2563EB' : '#334155' }}>All Years</Text>
+                {selectedYear === 'all' && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+              </TouchableOpacity>
+              {getUniqueYears().map((y) => (
+                <TouchableOpacity
+                  key={y}
+                  onPress={() => { setSelectedYear(y); setShowYearPicker(false); }}
+                  style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: selectedYear === y ? '700' : '500', color: selectedYear === y ? '#2563EB' : '#334155' }}>{y}</Text>
+                  {selectedYear === y && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
+      {/* Month Picker Modal */}
+      <Modal transparent visible={showMonthPicker} animationType="fade" onRequestClose={() => setShowMonthPicker(false)}>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowMonthPicker(false)}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 20 }}
+        >
+          <View style={{ backgroundColor: "#fff", borderRadius: 24, width: "100%", padding: 24, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: "#1E293B", marginBottom: 16 }}>Select Month</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 350 }}>
+              <TouchableOpacity
+                onPress={() => { setSelectedMonth('all'); setShowMonthPicker(false); }}
+                style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <Text style={{ fontSize: 15, fontWeight: selectedMonth === 'all' ? '700' : '500', color: selectedMonth === 'all' ? '#2563EB' : '#334155' }}>All Months</Text>
+                {selectedMonth === 'all' && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+              </TouchableOpacity>
+              {MONTHS.map((m, idx) => (
+                <TouchableOpacity
+                  key={m}
+                  onPress={() => { setSelectedMonth(idx); setShowMonthPicker(false); }}
+                  style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: selectedMonth === idx ? '700' : '500', color: selectedMonth === idx ? '#2563EB' : '#334155' }}>{m}</Text>
+                  {selectedMonth === idx && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
     </SafeAreaView>
   );
