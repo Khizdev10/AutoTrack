@@ -245,7 +245,6 @@ export const syncOfflineQueue = async (clerkToken: string): Promise<boolean> => 
       remainingQueue.push(action);
     }
   }
-
-  await saveOfflineQueue(remainingQueue);
+  await saveOfflineQueue(remainingQueue)
   return remainingQueue.length === 0;
 };
