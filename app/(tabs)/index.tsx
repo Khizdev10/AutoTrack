@@ -25,6 +25,15 @@ import {
 } from "react-native";
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/app/context/ThemeContext";
+import {
+  checkOnline,
+  getFromCache,
+  saveToCache,
+  mergeQueueWithState,
+  syncOfflineQueue,
+  getOfflineQueue,
+  addToOfflineQueue
+} from "@/app/lib/offlineSync";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -35,6 +44,8 @@ export default function App() {
   const [cars, setCars] = useState<any[]>([]);
   const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [carToDelete, setCarToDelete] = useState<any>(null);
   const [carToEdit, setCarToEdit] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -204,32 +215,74 @@ export default function App() {
   const fetchCarData = async () => {
     setIsLoading(true);
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
-      const { data, error } = await supabase
-        .from("cars")
-        .select("*, service_schedules(*)")
-        .order("created_at", { ascending: false });
-      if (data) setCars(data);
-      if (error) console.error("Error fetching cars:", error);
+      const online = await checkOnline();
+      setIsOffline(!online);
 
-      // Fetch overall stats
-      const { data: serviceLogs } = await supabase
-        .from("service_logs")
-        .select("cost, date_performed");
-      if (serviceLogs) {
-        setAllServiceLogs(serviceLogs);
+      const queue = await getOfflineQueue();
+
+      if (online) {
+        const token = await getToken({ template: "supabase" });
+        if (token) {
+          setIsSyncing(true);
+          await syncOfflineQueue(token);
+          setIsSyncing(false);
+
+          const supabase = createClerkSupabaseClient(token);
+          const { data, error } = await supabase
+            .from("cars")
+            .select("*, service_schedules(*)")
+            .order("created_at", { ascending: false });
+          if (data) {
+            setCars(data);
+            await saveToCache("garage_cars", data);
+          }
+          if (error) console.error("Error fetching cars:", error);
+
+          const { data: serviceLogs } = await supabase
+            .from("service_logs")
+            .select("cost, date_performed");
+          if (serviceLogs) {
+            setAllServiceLogs(serviceLogs);
+            await saveToCache("overall_service_logs", serviceLogs);
+          }
+
+          const { data: petrolLogs } = await supabase
+            .from("petrol_logs")
+            .select("total_cost, date");
+          if (petrolLogs) {
+            setAllPetrolLogs(petrolLogs);
+            await saveToCache("overall_petrol_logs", petrolLogs);
+          }
+          return;
+        }
       }
 
-      const { data: petrolLogs } = await supabase
-        .from("petrol_logs")
-        .select("total_cost, date");
-      if (petrolLogs) {
-        setAllPetrolLogs(petrolLogs);
-      }
+      // Fallback if offline or if token fetching failed/returned null
+      const cachedCars = await getFromCache("garage_cars") || [];
+      const cachedServiceLogs = await getFromCache("overall_service_logs") || [];
+      const cachedPetrolLogs = await getFromCache("overall_petrol_logs") || [];
+
+      const finalCars = mergeQueueWithState(cachedCars, queue, 'cars');
+      const finalServiceLogs = mergeQueueWithState(cachedServiceLogs, queue, 'service_logs');
+      const finalPetrolLogs = mergeQueueWithState(cachedPetrolLogs, queue, 'petrol_logs');
+
+      setCars(finalCars);
+      setAllServiceLogs(finalServiceLogs);
+      setAllPetrolLogs(finalPetrolLogs);
     } catch (err) {
       console.error(err);
+      const queue = await getOfflineQueue();
+      const cachedCars = await getFromCache("garage_cars") || [];
+      const cachedServiceLogs = await getFromCache("overall_service_logs") || [];
+      const cachedPetrolLogs = await getFromCache("overall_petrol_logs") || [];
+
+      const finalCars = mergeQueueWithState(cachedCars, queue, 'cars');
+      const finalServiceLogs = mergeQueueWithState(cachedServiceLogs, queue, 'service_logs');
+      const finalPetrolLogs = mergeQueueWithState(cachedPetrolLogs, queue, 'petrol_logs');
+
+      setCars(finalCars);
+      setAllServiceLogs(finalServiceLogs);
+      setAllPetrolLogs(finalPetrolLogs);
     } finally {
       setIsLoading(false);
     }
@@ -237,11 +290,21 @@ export default function App() {
 
   const deleteCar = async (id: string) => {
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
-      const { error } = await supabase.from("cars").delete().eq("id", id).select();
-      if (error) console.error("Error deleting car:", error);
+      const online = await checkOnline();
+      if (online) {
+        const token = await getToken({ template: "supabase" });
+        if (!token) return;
+        const supabase = createClerkSupabaseClient(token);
+        const { error } = await supabase.from("cars").delete().eq("id", id).select();
+        if (error) console.error("Error deleting car:", error);
+      } else {
+        await addToOfflineQueue({
+          table: 'cars',
+          action: 'DELETE',
+          payload: {},
+          recordId: id,
+        });
+      }
     } catch (err) {
       console.error("Exception in deleteCar:", err);
     }
@@ -251,25 +314,38 @@ export default function App() {
     if (!carToEdit) return;
     setIsSaving(true);
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
-      const { error } = await supabase
-        .from("cars")
-        .update({
-          vehicleMake: editMake,
-          modelName: editModel,
-          productionYear: editYear,
-          currentMileage: editMileage,
-          imageUrl: editImageUrl,
-          vin: editVin,
-          nickname: editNickname,
-          fuel_range: editFuelRange ? parseInt(editFuelRange) : null,
-          avg_consumption: editAvgConsumption ? parseFloat(editAvgConsumption) : null,
-          tire_pressure: editTirePressure ? parseInt(editTirePressure) : null,
-        })
-        .eq("id", carToEdit.id);
-      if (error) console.error("Error updating car:", error);
+      const payload = {
+        vehicleMake: editMake,
+        modelName: editModel,
+        productionYear: editYear,
+        currentMileage: editMileage ? parseInt(editMileage) : 0,
+        imageUrl: editImageUrl,
+        vin: editVin,
+        nickname: editNickname,
+        fuel_range: editFuelRange ? parseInt(editFuelRange) : null,
+        avg_consumption: editAvgConsumption ? parseFloat(editAvgConsumption) : null,
+        tire_pressure: editTirePressure ? parseInt(editTirePressure) : null,
+      };
+
+      const online = await checkOnline();
+
+      if (online) {
+        const token = await getToken({ template: "supabase" });
+        if (!token) return;
+        const supabase = createClerkSupabaseClient(token);
+        const { error } = await supabase
+          .from("cars")
+          .update(payload)
+          .eq("id", carToEdit.id);
+        if (error) console.error("Error updating car:", error);
+      } else {
+        await addToOfflineQueue({
+          table: 'cars',
+          action: 'UPDATE',
+          payload,
+          recordId: carToEdit.id,
+        });
+      }
     } catch (err) {
       console.error("Exception in updateCar:", err);
     } finally {
@@ -325,6 +401,29 @@ export default function App() {
   return (
     <RNSafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <Header />
+      {(isOffline || isSyncing) && (
+        <View style={{
+          backgroundColor: isSyncing ? "#3B82F6" : "#F59E0B",
+          paddingVertical: 6,
+          paddingHorizontal: 20,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+        }}>
+          {isSyncing ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>Syncing offline changes...</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="cloud-offline" size={14} color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>Running Offline (Changes will sync when online)</Text>
+            </>
+          )}
+        </View>
+      )}
 
       {/* ── Delete Confirmation Modal ── */}
       <Modal

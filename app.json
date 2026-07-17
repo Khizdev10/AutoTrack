@@ -64,6 +64,16 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "AutoTrack requires background location access to track your drives and log mileage even when the screen is off.",
+          "locationAlwaysPermission": "AutoTrack requires background location access to track your drives and log mileage even when the screen is off.",
+          "locationWhenInUsePermission": "AutoTrack uses your location to track your driving distance and update your odometer in real-time.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
         "expo-font",
         {
           "fonts": [

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, BackHandler, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from '@/app/context/ThemeContext';
+import { checkOnline, addToOfflineQueue } from '@/app/lib/offlineSync';
 
 interface AddCarProps {
     onCarAdded: () => void;
@@ -52,29 +53,42 @@ const AddCar = ({ onCarAdded, onCancel }: AddCarProps) => {
         if (isSaving) return;
         setIsSaving(true);
         try {
-            const token = await getToken({ template: 'supabase' });
-            if (!token) return;
-            const supabase = createClerkSupabaseClient(token);
-            const { error } = await supabase.from('cars').insert([
-                {
-                    user_id: userId,
-                    vehicleMake,
-                    modelName,
-                    productionYear,
-                    currentMileage,
-                    imageUrl,
-                    vin,
-                    nickname,
-                    fuel_range: fuelRange ? parseInt(fuelRange) : null,
-                    avg_consumption: avgConsumption ? parseFloat(avgConsumption) : null,
-                    tire_pressure: tirePressure ? parseInt(tirePressure) : null,
-                },
-            ]);
-            if (!error) {
-                console.log("Car added successfully");
-                onCarAdded();
+            const payload = {
+                user_id: userId,
+                vehicleMake,
+                modelName,
+                productionYear,
+                currentMileage: currentMileage ? parseInt(currentMileage) : 0,
+                imageUrl,
+                vin,
+                nickname,
+                fuel_range: fuelRange ? parseInt(fuelRange) : null,
+                avg_consumption: avgConsumption ? parseFloat(avgConsumption) : null,
+                tire_pressure: tirePressure ? parseInt(tirePressure) : null,
+            };
+
+            const online = await checkOnline();
+
+            if (online) {
+                const token = await getToken({ template: 'supabase' });
+                if (!token) return;
+                const supabase = createClerkSupabaseClient(token);
+                const { error } = await supabase.from('cars').insert([payload]);
+                if (!error) {
+                    console.log("Car added successfully");
+                    onCarAdded();
+                } else {
+                    console.error("Error adding car:", error);
+                }
             } else {
-                console.error("Error adding car:", error);
+                const tempId = `temp_${Date.now()}`;
+                await addToOfflineQueue({
+                    table: 'cars',
+                    action: 'INSERT',
+                    payload: { ...payload, id: tempId },
+                    recordId: tempId,
+                });
+                onCarAdded();
             }
         } catch (err) {
             console.error(err);

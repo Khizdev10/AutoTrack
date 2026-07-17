@@ -1,10 +1,12 @@
+import { useTheme } from "@/app/context/ThemeContext";
+import { BACKGROUND_LOCATION_TASK } from "@/app/lib/backgroundLocation";
+import { convertAndFormatDistance, convertAndFormatVolume, formatCurrency, getPreferences } from "@/app/lib/settings";
 import { createClerkSupabaseClient } from "@/app/lib/supabase";
-import { getPreferences, formatCurrency, convertAndFormatDistance, convertAndFormatVolume } from "@/app/lib/settings";
-import { useIsFocused } from "@react-navigation/native";
 import Header from "@/components/Header";
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
@@ -25,11 +27,17 @@ import {
   View
 } from "react-native";
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { BACKGROUND_LOCATION_TASK } from "@/app/lib/backgroundLocation";
-import { useTheme } from "@/app/context/ThemeContext";
+import {
+  checkOnline,
+  getFromCache,
+  saveToCache,
+  mergeQueueWithState,
+  addToOfflineQueue,
+  syncOfflineQueue,
+  getOfflineQueue
+} from "@/app/lib/offlineSync";
 
 const SafeAreaView = styled(RNSafeAreaView);
-
 // Haversine formula
 function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371;
@@ -63,6 +71,7 @@ const PRESET_SCHEDULES = [
 
 export default function CarDetailScreen() {
   const { id } = useLocalSearchParams();
+  const carIdString = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
   const { getToken } = useAuth();
   const insets = useSafeAreaInsets();
@@ -72,6 +81,8 @@ export default function CarDetailScreen() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Preference states
   const [prefCurrency, setPrefCurrency] = useState("Rs.");
@@ -125,7 +136,7 @@ export default function CarDetailScreen() {
           parts: [{ text: msg.text }]
         }));
 
-      const systemInstruction = 
+      const systemInstruction =
         `You are a professional, friendly, and expert virtual auto mechanic. ` +
         `The user's active vehicle is a ${car.productionYear} ${car.vehicleMake} ${car.modelName} with ${currentDisplayMileage.toLocaleString()} ${prefDistanceUnit}. ` +
         `Provide helpful, concise auto troubleshooting advice, possible causes, estimated repair costs in the user's currency (${prefCurrency}), severity level (whether it's safe to drive), and next steps to inspect or repair. ` +
@@ -154,7 +165,7 @@ export default function CarDetailScreen() {
 
       const resData = await response.json();
       const replyText = resData.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't parse a response. Please try again.";
-      
+
       setAiMessages(prev => [...prev, { id: Math.random().toString(), sender: "ai", text: replyText }]);
     } catch (error: any) {
       console.error("AI Error:", error);
@@ -213,7 +224,7 @@ export default function CarDetailScreen() {
   const getUniqueYears = () => {
     const yearsSet = new Set<number>();
     yearsSet.add(new Date().getFullYear());
-    
+
     logs.forEach(log => {
       if (log.date_performed) {
         const y = new Date(log.date_performed).getFullYear();
@@ -234,10 +245,10 @@ export default function CarDetailScreen() {
       if (!log[dateField]) return false;
       const logDate = new Date(log[dateField]);
       if (isNaN(logDate.getTime())) return false;
-      
+
       const matchYear = selectedYear === 'all' || logDate.getFullYear() === selectedYear;
       const matchMonth = selectedMonth === 'all' || logDate.getMonth() === selectedMonth;
-      
+
       return matchYear && matchMonth;
     });
   };
@@ -262,7 +273,7 @@ export default function CarDetailScreen() {
 
   const getMonthlyBreakdown = (serviceLogsList: any[], petrolLogsList: any[]) => {
     const breakdown: { [key: string]: { service: number; petrol: number; total: number } } = {};
-    
+
     serviceLogsList.forEach(log => {
       if (!log.date_performed || !log.cost) return;
       const date = new Date(log.date_performed);
@@ -442,29 +453,111 @@ export default function CarDetailScreen() {
   const fetchCarDetails = async () => {
     setIsLoading(true);
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
+      const online = await checkOnline();
+      setIsOffline(!online);
 
-      const { data: carData } = await supabase.from("cars").select("*").eq("id", id).single();
-      if (carData) {
-        setCar(carData);
-        setManualMileage(carData.currentMileage?.toString() || "");
+      const queue = await getOfflineQueue();
+      const carIdString = Array.isArray(id) ? id[0] : id;
+
+      if (online) {
+        const token = await getToken({ template: "supabase" });
+        if (token) {
+          setIsSyncing(true);
+          await syncOfflineQueue(token);
+          setIsSyncing(false);
+
+          const supabase = createClerkSupabaseClient(token);
+
+          const { data: carData } = await supabase.from("cars").select("*").eq("id", id).single();
+          if (carData) {
+            setCar(carData);
+            setManualMileage(carData.currentMileage?.toString() || "");
+            await saveToCache(`car_${carIdString}`, carData);
+          }
+
+          const { data: scheduleData } = await supabase.from("service_schedules").select("*").eq("car_id", id);
+          if (scheduleData) {
+            setSchedules(scheduleData);
+            await saveToCache(`schedules_${carIdString}`, scheduleData);
+          }
+
+          const { data: logData } = await supabase.from("service_logs").select("*").eq("car_id", id).order("date_performed", { ascending: false });
+          if (logData) {
+            setLogs(logData);
+            await saveToCache(`logs_${carIdString}`, logData);
+          }
+
+          const { data: petrolData } = await supabase.from("petrol_logs").select("*").eq("car_id", id).order("date", { ascending: false });
+          if (petrolData) {
+            setPetrolLogs(petrolData);
+            await saveToCache(`petrol_${carIdString}`, petrolData);
+          }
+
+          if (carData && scheduleData) {
+            await checkServiceReminders(carData, scheduleData);
+          }
+          return;
+        }
       }
 
-      const { data: scheduleData } = await supabase.from("service_schedules").select("*").eq("car_id", id);
-      if (scheduleData) setSchedules(scheduleData);
-
-      const { data: logData } = await supabase.from("service_logs").select("*").eq("car_id", id).order("date_performed", { ascending: false });
-      if (logData) setLogs(logData);
-
-      const { data: petrolData } = await supabase.from("petrol_logs").select("*").eq("car_id", id).order("date", { ascending: false });
-      if (petrolData) setPetrolLogs(petrolData);
-      if (carData && scheduleData) {
-        await checkServiceReminders(carData, scheduleData);
+      // Fallback to cache if offline or token fetching failed
+      let cachedCar = await getFromCache(`car_${carIdString}`);
+      if (!cachedCar) {
+        const garageCars = await getFromCache("garage_cars") || [];
+        cachedCar = garageCars.find((c: any) => String(c.id) === String(carIdString)) || null;
       }
+
+      let cachedSchedules = await getFromCache(`schedules_${carIdString}`);
+      if (!cachedSchedules && cachedCar) {
+        cachedSchedules = cachedCar.service_schedules || [];
+      }
+      if (!cachedSchedules) cachedSchedules = [];
+
+      const cachedLogs = await getFromCache(`logs_${carIdString}`) || [];
+      const cachedPetrol = await getFromCache(`petrol_${carIdString}`) || [];
+
+      const finalCar = cachedCar ? mergeQueueWithState([cachedCar], queue, 'cars', carIdString)[0] : null;
+      const finalSchedules = mergeQueueWithState(cachedSchedules, queue, 'service_schedules', carIdString);
+      const finalLogs = mergeQueueWithState(cachedLogs, queue, 'service_logs', carIdString);
+      const finalPetrol = mergeQueueWithState(cachedPetrol, queue, 'petrol_logs', carIdString);
+
+      if (finalCar) {
+        setCar(finalCar);
+        setManualMileage(finalCar.currentMileage?.toString() || "");
+      }
+      setSchedules(finalSchedules);
+      setLogs(finalLogs);
+      setPetrolLogs(finalPetrol);
     } catch (err) {
       console.error(err);
+      const queue = await getOfflineQueue();
+      let cachedCar = await getFromCache(`car_${carIdString}`);
+      if (!cachedCar) {
+        const garageCars = await getFromCache("garage_cars") || [];
+        cachedCar = garageCars.find((c: any) => String(c.id) === String(carIdString)) || null;
+      }
+
+      let cachedSchedules = await getFromCache(`schedules_${carIdString}`);
+      if (!cachedSchedules && cachedCar) {
+        cachedSchedules = cachedCar.service_schedules || [];
+      }
+      if (!cachedSchedules) cachedSchedules = [];
+
+      const cachedLogs = await getFromCache(`logs_${carIdString}`) || [];
+      const cachedPetrol = await getFromCache(`petrol_${carIdString}`) || [];
+
+      const finalCar = cachedCar ? mergeQueueWithState([cachedCar], queue, 'cars', carIdString)[0] : null;
+      const finalSchedules = mergeQueueWithState(cachedSchedules, queue, 'service_schedules', carIdString);
+      const finalLogs = mergeQueueWithState(cachedLogs, queue, 'service_logs', carIdString);
+      const finalPetrol = mergeQueueWithState(cachedPetrol, queue, 'petrol_logs', carIdString);
+
+      if (finalCar) {
+        setCar(finalCar);
+        setManualMileage(finalCar.currentMileage?.toString() || "");
+      }
+      setSchedules(finalSchedules);
+      setLogs(finalLogs);
+      setPetrolLogs(finalPetrol);
     } finally {
       setIsLoading(false);
     }
@@ -472,16 +565,29 @@ export default function CarDetailScreen() {
 
   const updateCarMileage = async (newMileage: number) => {
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
+      const online = await checkOnline();
+      setCar((prev: any) => {
+        const nextCar = prev ? { ...prev, currentMileage: newMileage } : null;
+        if (nextCar) saveToCache(`car_${carIdString}`, nextCar);
+        return nextCar;
+      });
 
-      const { error } = await supabase.from("cars").update({ currentMileage: newMileage }).eq("id", id);
-      if (!error) {
-        setCar((prev: any) => ({ ...prev, currentMileage: newMileage }));
-        if (car && schedules) {
-          await checkServiceReminders({ ...car, currentMileage: newMileage }, schedules);
-        }
+      if (online) {
+        const token = await getToken({ template: "supabase" });
+        if (!token) return;
+        const supabase = createClerkSupabaseClient(token);
+        await supabase.from("cars").update({ currentMileage: newMileage }).eq("id", carIdString);
+      } else {
+        await addToOfflineQueue({
+          table: 'cars',
+          action: 'UPDATE',
+          payload: { currentMileage: newMileage },
+          recordId: carIdString,
+        });
+      }
+
+      if (car && schedules) {
+        await checkServiceReminders({ ...car, currentMileage: newMileage }, schedules);
       }
     } catch (err) {
       console.error(err);
@@ -533,35 +639,55 @@ export default function CarDetailScreen() {
       setTripDistance(0);
       await AsyncStorage.removeItem("temp_trip_tracking");
     } else {
-      const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
-      if (fgStatus !== 'granted') {
-        alert('Foreground location permission is required for Drive Mode');
-        return;
+      try {
+        const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
+        if (fgStatus !== 'granted') {
+          alert('Foreground location permission is required for Drive Mode');
+          return;
+        }
+
+        let bgStatus = 'denied';
+        try {
+          const bgPerm = await Location.requestBackgroundPermissionsAsync();
+          bgStatus = bgPerm.status;
+        } catch (bgErr) {
+          console.error("Error requesting background location permissions:", bgErr);
+          alert("Background location permission request failed. AutoTrack will attempt to track with foreground location.");
+          bgStatus = 'granted';
+        }
+
+        if (bgStatus !== 'granted') {
+          alert('Background location permission (Allow all the time) is required to track in background.');
+          return;
+        }
+
+        try {
+          await Notifications.requestPermissionsAsync();
+        } catch (notifErr) {
+          console.warn("Notifications permission request failed:", notifErr);
+        }
+
+        await AsyncStorage.setItem("temp_trip_tracking", JSON.stringify({ tripDistance: 0, lastCoords: null }));
+        setIsTracking(true);
+        setTripDistance(0);
+
+        await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 5000,
+          distanceInterval: 10,
+          showsBackgroundLocationIndicator: true,
+          foregroundService: {
+            notificationTitle: "AutoTrack GPS Active",
+            notificationBody: "Tracking your drive mileage in the background...",
+            notificationColor: "#2563EB",
+          },
+        });
+      } catch (err: any) {
+        console.error("Error starting location updates:", err);
+        setIsTracking(false);
+        await AsyncStorage.removeItem("temp_trip_tracking").catch(() => {});
+        alert(`Failed to start drive mode: ${err?.message || err}`);
       }
-
-      const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
-      if (bgStatus !== 'granted') {
-        alert('Background location permission (Allow all the time) is required to track in background.');
-        return;
-      }
-
-      await Notifications.requestPermissionsAsync();
-      await AsyncStorage.setItem("temp_trip_tracking", JSON.stringify({ tripDistance: 0, lastCoords: null }));
-
-      setIsTracking(true);
-      setTripDistance(0);
-
-      await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 5000,
-        distanceInterval: 10,
-        showsBackgroundLocationIndicator: true,
-        foregroundService: {
-          notificationTitle: "AutoTrack GPS Active",
-          notificationBody: "Tracking your drive mileage in the background...",
-          notificationColor: "#2563EB",
-        },
-      });
     }
   };
 
@@ -569,20 +695,29 @@ export default function CarDetailScreen() {
     if (!newScheduleType || !newScheduleIntervalMiles) return;
     setIsSaving(true);
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
+      const payload = {
+        car_id: id,
+        service_type: newScheduleType,
+        interval_miles: parseInt(newScheduleIntervalMiles),
+        interval_months: newScheduleIntervalMonths ? parseInt(newScheduleIntervalMonths) : null,
+        last_service_mileage: car?.currentMileage || 0,
+        last_service_date: new Date().toISOString(),
+      };
 
-      await supabase.from("service_schedules").insert([
-        {
-          car_id: id,
-          service_type: newScheduleType,
-          interval_miles: parseInt(newScheduleIntervalMiles),
-          interval_months: newScheduleIntervalMonths ? parseInt(newScheduleIntervalMonths) : null,
-          last_service_mileage: car?.currentMileage || 0,
-          last_service_date: new Date().toISOString(),
-        },
-      ]);
+      const online = await checkOnline();
+      if (online) {
+        const token = await getToken({ template: "supabase" });
+        if (!token) return;
+        const supabase = createClerkSupabaseClient(token);
+        await supabase.from("service_schedules").insert([payload]);
+      } else {
+        await addToOfflineQueue({
+          table: 'service_schedules',
+          action: 'INSERT',
+          payload,
+          recordId: `temp_${Date.now()}`,
+        });
+      }
     } finally {
       setIsSaving(false);
       setShowScheduleModal(false);
@@ -597,39 +732,74 @@ export default function CarDetailScreen() {
     if (!newLogType || !newLogMileage) return;
     setIsSaving(true);
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
+      const payload: any = {
+        service_type: newLogType,
+        mileage_at_service: parseInt(newLogMileage),
+        cost: newLogCost ? parseFloat(newLogCost) : null,
+        notes: newLogNotes,
+      };
+
+      const online = await checkOnline();
 
       if (editingLogId) {
-        // UPDATE existing log
-        await supabase.from("service_logs").update({
-          service_type: newLogType,
-          mileage_at_service: parseInt(newLogMileage),
-          cost: newLogCost ? parseFloat(newLogCost) : null,
-          notes: newLogNotes,
-        }).eq("id", editingLogId);
+        if (online) {
+          const token = await getToken({ template: "supabase" });
+          if (!token) return;
+          const supabase = createClerkSupabaseClient(token);
+          await supabase.from("service_logs").update(payload).eq("id", editingLogId);
+        } else {
+          await addToOfflineQueue({
+            table: 'service_logs',
+            action: 'UPDATE',
+            payload,
+            recordId: editingLogId,
+          });
+        }
       } else {
-        // INSERT new log
-        const { error } = await supabase.from("service_logs").insert([{
-          car_id: id,
-          service_type: newLogType,
-          mileage_at_service: parseInt(newLogMileage),
-          cost: newLogCost ? parseFloat(newLogCost) : null,
-          notes: newLogNotes,
-          date_performed: new Date().toISOString(),
-        }]);
+        payload.car_id = id;
+        payload.date_performed = new Date().toISOString();
 
-        if (!error) {
+        if (online) {
+          const token = await getToken({ template: "supabase" });
+          if (!token) return;
+          const supabase = createClerkSupabaseClient(token);
+          const { error } = await supabase.from("service_logs").insert([payload]);
+
+          if (!error) {
+            if (parseInt(newLogMileage) > (car?.currentMileage || 0)) {
+              await updateCarMileage(parseInt(newLogMileage));
+            }
+            const scheduleToUpdate = schedules.find(s => s.service_type.toLowerCase() === newLogType.toLowerCase());
+            if (scheduleToUpdate) {
+              await supabase.from("service_schedules").update({
+                last_service_mileage: parseInt(newLogMileage),
+                last_service_date: new Date().toISOString()
+              }).eq("id", scheduleToUpdate.id);
+            }
+          }
+        } else {
+          await addToOfflineQueue({
+            table: 'service_logs',
+            action: 'INSERT',
+            payload,
+            recordId: `temp_${Date.now()}`,
+          });
+
           if (parseInt(newLogMileage) > (car?.currentMileage || 0)) {
             await updateCarMileage(parseInt(newLogMileage));
           }
+
           const scheduleToUpdate = schedules.find(s => s.service_type.toLowerCase() === newLogType.toLowerCase());
           if (scheduleToUpdate) {
-            await supabase.from("service_schedules").update({
-              last_service_mileage: parseInt(newLogMileage),
-              last_service_date: new Date().toISOString()
-            }).eq("id", scheduleToUpdate.id);
+            await addToOfflineQueue({
+              table: 'service_schedules',
+              action: 'UPDATE',
+              payload: {
+                last_service_mileage: parseInt(newLogMileage),
+                last_service_date: new Date().toISOString(),
+              },
+              recordId: scheduleToUpdate.id,
+            });
           }
         }
       }
@@ -649,39 +819,63 @@ export default function CarDetailScreen() {
     if (!newPetrolLiters || !newPetrolPricePerLiter) return;
     setIsSaving(true);
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
-
       const liters = parseFloat(newPetrolLiters);
       const pricePerLiter = parseFloat(newPetrolPricePerLiter);
       const totalCost = Math.round(liters * pricePerLiter);
 
-      if (editingPetrolLogId) {
-        // UPDATE existing petrol log
-        await supabase.from("petrol_logs").update({
-          liters,
-          price_per_liter: pricePerLiter,
-          total_cost: totalCost,
-          mileage_at_fillup: newPetrolMileage ? parseInt(newPetrolMileage) : null,
-          notes: newPetrolNotes || null,
-        }).eq("id", editingPetrolLogId);
-      } else {
-        // INSERT new petrol log
-        const { error } = await supabase.from("petrol_logs").insert([{
-          car_id: id,
-          liters,
-          price_per_liter: pricePerLiter,
-          total_cost: totalCost,
-          mileage_at_fillup: newPetrolMileage ? parseInt(newPetrolMileage) : null,
-          notes: newPetrolNotes || null,
-          date: new Date().toISOString(),
-        }]);
+      const payload: any = {
+        liters,
+        price_per_liter: pricePerLiter,
+        total_cost: totalCost,
+        mileage_at_fillup: newPetrolMileage ? parseInt(newPetrolMileage) : null,
+        notes: newPetrolNotes || null,
+      };
 
-        if (!error && newPetrolMileage) {
-          const mileage = parseInt(newPetrolMileage);
-          if (mileage > (car?.currentMileage || 0)) {
-            await updateCarMileage(mileage);
+      const online = await checkOnline();
+
+      if (editingPetrolLogId) {
+        if (online) {
+          const token = await getToken({ template: "supabase" });
+          if (!token) return;
+          const supabase = createClerkSupabaseClient(token);
+          await supabase.from("petrol_logs").update(payload).eq("id", editingPetrolLogId);
+        } else {
+          await addToOfflineQueue({
+            table: 'petrol_logs',
+            action: 'UPDATE',
+            payload,
+            recordId: editingPetrolLogId,
+          });
+        }
+      } else {
+        payload.car_id = id;
+        payload.date = new Date().toISOString();
+
+        if (online) {
+          const token = await getToken({ template: "supabase" });
+          if (!token) return;
+          const supabase = createClerkSupabaseClient(token);
+          const { error } = await supabase.from("petrol_logs").insert([payload]);
+
+          if (!error && newPetrolMileage) {
+            const mileage = parseInt(newPetrolMileage);
+            if (mileage > (car?.currentMileage || 0)) {
+              await updateCarMileage(mileage);
+            }
+          }
+        } else {
+          await addToOfflineQueue({
+            table: 'petrol_logs',
+            action: 'INSERT',
+            payload,
+            recordId: `temp_${Date.now()}`,
+          });
+
+          if (newPetrolMileage) {
+            const mileage = parseInt(newPetrolMileage);
+            if (mileage > (car?.currentMileage || 0)) {
+              await updateCarMileage(mileage);
+            }
           }
         }
       }
@@ -699,10 +893,20 @@ export default function CarDetailScreen() {
 
   const deleteServiceLog = async (logId: number) => {
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
-      await supabase.from("service_logs").delete().eq("id", logId);
+      const online = await checkOnline();
+      if (online) {
+        const token = await getToken({ template: "supabase" });
+        if (!token) return;
+        const supabase = createClerkSupabaseClient(token);
+        await supabase.from("service_logs").delete().eq("id", logId);
+      } else {
+        await addToOfflineQueue({
+          table: 'service_logs',
+          action: 'DELETE',
+          payload: {},
+          recordId: logId,
+        });
+      }
       fetchCarDetails();
     } catch (err) {
       console.error(err);
@@ -711,10 +915,20 @@ export default function CarDetailScreen() {
 
   const deletePetrolLog = async (logId: number) => {
     try {
-      const token = await getToken({ template: "supabase" });
-      if (!token) return;
-      const supabase = createClerkSupabaseClient(token);
-      await supabase.from("petrol_logs").delete().eq("id", logId);
+      const online = await checkOnline();
+      if (online) {
+        const token = await getToken({ template: "supabase" });
+        if (!token) return;
+        const supabase = createClerkSupabaseClient(token);
+        await supabase.from("petrol_logs").delete().eq("id", logId);
+      } else {
+        await addToOfflineQueue({
+          table: 'petrol_logs',
+          action: 'DELETE',
+          payload: {},
+          recordId: logId,
+        });
+      }
       fetchCarDetails();
     } catch (err) {
       console.error(err);
@@ -789,6 +1003,29 @@ export default function CarDetailScreen() {
           </TouchableOpacity>
         }
       />
+      {(isOffline || isSyncing) && (
+        <View style={{
+          backgroundColor: isSyncing ? "#3B82F6" : "#F59E0B",
+          paddingVertical: 6,
+          paddingHorizontal: 20,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+        }}>
+          {isSyncing ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>Syncing offline changes...</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="cloud-offline" size={14} color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>Running Offline (Changes will sync when online)</Text>
+            </>
+          )}
+        </View>
+      )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 60 + insets.bottom }}>
 
