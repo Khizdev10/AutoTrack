@@ -1,6 +1,7 @@
 import "@/global.css";
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
+import { resourceCache } from "@clerk/expo/resource-cache";
 import { useFonts } from "expo-font";
 import { Slot, SplashScreen } from "expo-router";
 import { useEffect } from "react";
@@ -33,7 +34,11 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+    <ClerkProvider 
+      publishableKey={publishableKey} 
+      tokenCache={tokenCache}
+      __experimental_resourceCache={resourceCache}
+    >
       <ThemeProvider>
         <Slot />
       </ThemeProvider>
